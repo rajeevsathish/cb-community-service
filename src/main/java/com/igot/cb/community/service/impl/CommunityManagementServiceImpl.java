@@ -104,6 +104,8 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
     @Value("${kafka.topic.community.user.count}")
     private String userCountUpdateTopic;
 
+    @Value("${no.of.popular.community}")
+    private Integer noOfPopularCommunities;
     @Autowired
     private RedisTemplate<String, Object> objectRedisTemplate;
 
@@ -783,9 +785,7 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
                 ((ObjectNode) dataNode).put(Constants.COUNT_OF_PEOPLE_JOINED,
                     dataNode.get(Constants.COUNT_OF_PEOPLE_JOINED).asInt() - 1);
                 updateCommunityDetails(optCommunity.get(), userId, dataNode);
-                String redisKey = Constants.CMMUNITY_USER_REDIS_PREFIX + communityId;
                 // Delete the key from Redis
-                objectRedisTemplate.delete(redisKey);
                 cacheService.deleteUserFromHash(Constants.CMMUNITY_USER_REDIS_PREFIX+communityId,Constants.USER_PREFIX+userId);
                 esUtilService.updateUserIndex(userId,communityId,false);
                 cacheService.deleteCache(generateRedisJwtTokenKey(createDefaultSearchPayload()));
@@ -1316,7 +1316,7 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
     public ApiResponse getPopularCommunitiesByField(Map<String, Object> payload) {
         log.info("CommunityEngagementService:getPopularCommunitiesByField:listing");
         ApiResponse response = ProjectUtil.createDefaultResponse(
-            Constants.API_SUB_CATEGORY_LIST_ALL);
+            Constants.API_POPULAR_COMMUNITY);
         try {
             if (payload.isEmpty() || !payload.containsKey(Constants.FIELD)
                 || payload.get(Constants.FIELD) == null) {
@@ -1326,8 +1326,21 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
                 return response;
 
             }
+            int offset = 0;
+            int limit = noOfPopularCommunities;
+
+            if (payload.containsKey(Constants.OFFSET) && payload.get(
+                Constants.OFFSET) instanceof Number) {
+                offset = ((Number) payload.get(Constants.OFFSET)).intValue();
+            }
+
+            if (payload.containsKey(Constants.LIMIT) && payload.get(
+                Constants.LIMIT) instanceof Number) {
+                limit = ((Number) payload.get(Constants.LIMIT)).intValue();
+            }
             SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-            searchSourceBuilder.size(10); // Number of documents to retrieve
+            searchSourceBuilder.from(offset); // Set the offset
+            searchSourceBuilder.size(limit); // Number of documents to retrieve
 
             // Sort by 'countOfPeopleJoined' in descending order
             searchSourceBuilder.sort(SortBuilders.fieldSort((String) payload.get(Constants.FIELD))
