@@ -35,6 +35,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RequestOptions;
+import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.Aggregations;
 import org.elasticsearch.search.SearchHit;
@@ -111,7 +112,7 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
 
     private BaseStorageService storageService = null;
 
-    @PostConstruct
+    //@PostConstruct
     public void init() {
         if (storageService == null) {
             storageService = StorageServiceFactory.getStorageService(new StorageConfig(cbServerProperties.getCloudStorageTypeName(), cbServerProperties.getCloudStorageKey(), cbServerProperties.getCloudStorageSecret().replace("\\n", "\n"), Option.apply(cbServerProperties.getCloudStorageEndpoint()), Option.empty()));
@@ -1341,6 +1342,8 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
             SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
             searchSourceBuilder.from(offset); // Set the offset
             searchSourceBuilder.size(limit); // Number of documents to retrieve
+            searchSourceBuilder.query(QueryBuilders.boolQuery()
+                .filter(QueryBuilders.termQuery(Constants.STATUS, Constants.ACTIVE)));
 
             // Sort by 'countOfPeopleJoined' in descending order
             searchSourceBuilder.sort(SortBuilders.fieldSort((String) payload.get(Constants.FIELD))
