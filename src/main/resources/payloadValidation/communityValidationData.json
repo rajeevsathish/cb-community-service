@@ -67,13 +67,22 @@
       "type": "string"
     },
     "competencyArea": {
-      "type": "string"
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     },
     "competencyTheme": {
-      "type": "string"
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     },
     "competencySubTheme": {
-      "type": "string"
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     },
     "countOfPeopleLiked": {
       "type": "integer"

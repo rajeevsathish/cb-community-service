@@ -49,4 +49,7 @@ public class CommunityCategory {
   @Column(name = "department_id")
   private String departmentId;
 
+  @Column(name = "count_of_communities")
+  private Long countOfCommunities;
+
 }

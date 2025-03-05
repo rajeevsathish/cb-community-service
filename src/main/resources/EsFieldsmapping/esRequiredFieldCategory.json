@@ -44,5 +44,8 @@
   },
   "departmentId": {
     "type": "keyword"
+  },
+  "countOfCommunities": {
+    "type": "long"
   }
 }

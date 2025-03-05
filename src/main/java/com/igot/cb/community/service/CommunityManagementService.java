@@ -48,4 +48,6 @@ public interface CommunityManagementService {
     ApiResponse report(String token, Map<String, Object> reportData);
 
     ApiResponse uploadFile(MultipartFile multipartFile, String communityId);
+
+    ApiResponse searchTopic(SearchCriteria searchCriteria);
 }

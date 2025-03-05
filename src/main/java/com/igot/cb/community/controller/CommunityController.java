@@ -151,4 +151,10 @@ public class CommunityController {
         ApiResponse uploadResponse = communityManagementService.uploadFile(multipartFile, communityId);
         return new ResponseEntity<>(uploadResponse, uploadResponse.getResponseCode());
     }
+
+    @PostMapping("/topic/search")
+    public ResponseEntity<ApiResponse> topicSearch(@RequestBody SearchCriteria searchCriteria) {
+        ApiResponse response = communityManagementService.searchTopic(searchCriteria);
+        return new ResponseEntity<>(response, response.getResponseCode());
+    }
 }
