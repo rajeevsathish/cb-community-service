@@ -763,9 +763,9 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
     }
 
     public List<Object> fetchDataForKeys(List<String> keys) {
-        // Fetch values for all keys from Redis
-        List<Object> values = objectRedisTemplate.opsForValue().multiGet(keys);
 
+        List<Object> values =
+            cacheService.hget(keys);
         // Create a map of key-value pairs, converting stringified JSON objects to User objects
         return keys.stream()
             .filter(key -> values.get(keys.indexOf(key)) != null) // Filter out null values
@@ -1683,7 +1683,6 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
         communityCategory.setParentId(parentId);
         communityCategory.setCreatedAt(currentTimestamp);
         communityCategory.setCountOfCommunities(0L);
-        communityCategory.setDepartmentId(categoryDetails.get(Constants.DEPARTMENT_ID).asText());
         // Save to the repository and fetch the generated ID
         return categoryRepository.save(communityCategory);
 

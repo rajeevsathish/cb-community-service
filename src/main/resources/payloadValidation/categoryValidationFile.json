@@ -44,8 +44,7 @@
   },
   "required": [
     "categoryName",
-    "description",
-    "departmentId"
+    "description"
   ],
   "additionalProperties": false
 }

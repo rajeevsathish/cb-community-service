@@ -28,6 +28,9 @@ public class CacheService {
   @Value("${spring.redis.cacheTtl}")
   private long cacheTtl;
 
+  @Autowired
+  private JedisPool jedisDataPopulationPool;
+
   public Jedis getJedis() {
     try (Jedis jedis = jedisPool.getResource()) {
       return jedis;
@@ -153,6 +156,21 @@ public class CacheService {
       log.error("Error while deleting field from Redis Hash: {}", e.getMessage());
     }
   }
+
+  public List<Object> hget(List<String> keys) {
+    List<Object> resultList = new ArrayList<>();
+    try (Jedis jedis = jedisDataPopulationPool.getResource()) {
+      for (String key : keys) {
+        String values = jedis.get(key); // Fetch entire hash
+        resultList.add(values); // Add map as an Object
+      }
+    } catch (Exception e) {
+      log.error("Error while fetching data from Redis: {}", e.getMessage());
+    }
+    return resultList;
+  }
+
+
 
 
 }

@@ -91,8 +91,8 @@ public class Constants {
     public static final String COUNT_OF_PEOPLE_JOINED = "countOfPeopleJoined";
     public static final String INACTIVE = "inactive";
     public static final String API_COMMUNITY_UPDATE = "api.community.update";
-    public static final String UPDATED_BY = "updatedByUserId";
-    public static final String CREATED_BY = "createdByUserId";
+    public static final String UPDATED_BY = "updatedBy";
+    public static final String CREATED_BY = "createdBy";
     public static final String UNAUTHORIZED_USER = "Unauthorized";
     public static final String USER_ID = "userId";
     public static final String USER_COMMUNITY_TABLE = "user_community";
