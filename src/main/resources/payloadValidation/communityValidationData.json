@@ -172,13 +172,8 @@
   "required": [
     "communityName",
     "description",
-    "communityAccessLevel",
-    "orgId",
-    "tags",
     "topicName",
-    "topicId",
-    "createdUserId",
-    "orgName"
+    "topicId"
   ],
   "additionalProperties": false
 }

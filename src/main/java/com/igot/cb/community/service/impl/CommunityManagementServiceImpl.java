@@ -31,6 +31,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
@@ -112,7 +113,7 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
 
     private BaseStorageService storageService = null;
 
-    //@PostConstruct
+    @PostConstruct
     public void init() {
         if (storageService == null) {
             storageService = StorageServiceFactory.getStorageService(new StorageConfig(cbServerProperties.getCloudStorageTypeName(), cbServerProperties.getCloudStorageKey(), cbServerProperties.getCloudStorageSecret().replace("\\n", "\n"), Option.apply(cbServerProperties.getCloudStorageEndpoint()), Option.empty()));
@@ -132,7 +133,7 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
             return response;
         }
         try {
-            validatePayload(Constants.PAYLOAD_VALIDATION_FILE, communityDetails);
+            payloadValidation.validatePayload(Constants.PAYLOAD_VALIDATION_FILE, communityDetails);
         } catch (CustomException e) {
             log.error("Validation failed: {}", e.getMessage(), e);
             response.getParams().setStatus(Constants.FAILED);
@@ -150,12 +151,42 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
                 response.setResponseCode(HttpStatus.BAD_REQUEST);
                 return response;
             }
-            if (esUtilService.doesCommunityExist(communityDetails.get(Constants.ORG_ID).asText(),
+            List<Map<String, Object>> userDetails;
+            Map<String, Object> propertyMap = new HashMap<>();
+            propertyMap.put(Constants.ID, userId);
+            userDetails = cassandraOperation.getRecordsByPropertiesWithoutFiltering(
+                Constants.KEYSPACE_SUNBIRD, Constants.TABLE_USER, propertyMap,
+                Arrays.asList(Constants.ROOT_ORG_ID, Constants.FIRST_NAME), 2);
+            String userRootOrgId = null;
+            if (!CollectionUtils.isEmpty(userDetails)) {
+                userRootOrgId = (String) userDetails.get(0).get(Constants.USER_ROOT_ORG_ID);
+            } else {
+                log.error("User details not found in Cassandra for validating user{}", userId);
+                response.getParams().setErrMsg(Constants.USER_DETAILS_NOT_FOUND);
+                response.setResponseCode(HttpStatus.BAD_REQUEST);
+                return response;
+            }
+
+            if (esUtilService.doesCommunityExist(userRootOrgId,
                 communityDetails.get(Constants.COMMUNITY_NAME).asText(), communityDetails.get(Constants.TOPIC_ID).asLong())) {
                 response.getParams().setStatus(Constants.FAILED);
                 response.getParams().setErrMsg("Community with the given orgId and communityName already exists in this topic. or its in blocked state.");
                 response.setResponseCode(HttpStatus.CONFLICT);
                 return response;
+            }
+            Map<String, Object> propertyMapOrg = new HashMap<>();
+            propertyMap.put(Constants.ID, userRootOrgId);
+            List<Map<String, Object>> orgDetails = cassandraOperation.getRecordsByPropertiesWithoutFiltering(
+                Constants.KEYSPACE_SUNBIRD, Constants.ORG_TABLE, propertyMapOrg, null, 1);
+            if (ObjectUtils.isEmpty(orgDetails)) {
+                response.getParams().setErrMsg(Constants.ORG_DETAILS_NOT_FOUND);
+                response.setResponseCode(HttpStatus.NOT_FOUND);
+                return response;
+            }
+            if (orgDetails.get(0).containsKey(Constants.ORG_NAME)
+                && orgDetails.get(0).get(Constants.ORG_NAME) != null) {
+                ((ObjectNode) communityDetails).put(Constants.ORG_NAME_CAMEL_CASE,
+                    orgDetails.get(0).get(Constants.ORG_NAME).toString());
             }
             String communityId = UUID.randomUUID().toString();
             CommunityEntity communityEngagementEntity = new CommunityEntity();
@@ -173,6 +204,7 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
             ((ObjectNode) communityDetails).put(Constants.UPDATED_BY, userId);
             ((ObjectNode) communityDetails).putArray(Constants.SEARCHTAGS)
                 .add(searchTagsArray);
+            ((ObjectNode) communityDetails).put(Constants.ORG_ID, userRootOrgId);
             communityEngagementEntity.setData(communityDetails);
             Timestamp currentTimestamp = new Timestamp(System.currentTimeMillis());
             communityEngagementEntity.setCreatedOn(currentTimestamp);
@@ -307,24 +339,6 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
             throw new CustomException(Constants.ERROR, "error while processing", HttpStatus.INTERNAL_SERVER_ERROR);
         }
         return response;
-    }
-
-    public void validatePayload(String fileName, JsonNode payload) {
-        try {
-            JsonSchemaFactory schemaFactory = JsonSchemaFactory.getInstance();
-            InputStream schemaStream = schemaFactory.getClass().getResourceAsStream(fileName);
-            JsonSchema schema = schemaFactory.getSchema(schemaStream);
-            Set<ValidationMessage> validationMessages = schema.validate(payload);
-            if (!validationMessages.isEmpty()) {
-                StringBuilder errorMessage = new StringBuilder("Validation error(s): \n");
-                for (ValidationMessage message : validationMessages) {
-                    errorMessage.append(message.getMessage()).append("\n");
-                }
-                throw new CustomException("Validation Error", errorMessage.toString(), HttpStatus.BAD_REQUEST);
-            }
-        } catch (Exception e) {
-            throw new CustomException("Failed to validate payload", e.getMessage(), HttpStatus.BAD_REQUEST);
-        }
     }
 
 
@@ -899,8 +913,25 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
             response.setResponseCode(HttpStatus.BAD_REQUEST);
             return response;
         }
+        List<Map<String, Object>> userDetails;
+        Map<String, Object> propertyMap = new HashMap<>();
+        propertyMap.put(Constants.ID, userId);
+        userDetails = cassandraOperation.getRecordsByPropertiesWithoutFiltering(
+            Constants.KEYSPACE_SUNBIRD, Constants.TABLE_USER, propertyMap,
+            Arrays.asList(Constants.ROOT_ORG_ID, Constants.FIRST_NAME), 2);
+        String userRootOrgId = (!CollectionUtils.isEmpty(userDetails) &&
+            userDetails.get(0).get(Constants.USER_ROOT_ORG_ID) != null)
+            ? (String) userDetails.get(0).get(Constants.USER_ROOT_ORG_ID)
+            : null;
+        if (Objects.isNull(userRootOrgId)) {
+            log.error("User Root Org ID is missing or null for user{}", userId);
+            response.getParams().setErrMsg(Constants.USER_DETAILS_NOT_FOUND);
+            response.setResponseCode(HttpStatus.BAD_REQUEST);
+            return response;
+        }
+
         try {
-            validatePayload(Constants.CATEGORY_PAYLOAD_VALIDATION_FILE, categoryDetails);
+            payloadValidation.validatePayload(Constants.CATEGORY_PAYLOAD_VALIDATION_FILE, categoryDetails);
         } catch (CustomException e) {
             log.error("Validation failed: {}", e.getMessage(), e);
             response.getParams().setStatus(Constants.FAILED);
@@ -924,7 +955,7 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
                     return response;
                 }
                 CommunityCategory communityCategorySaved = persistCategoryInPrimary(categoryDetails,
-                    categoryDetails.get(Constants.PARENT_ID).asInt(), userId, currentTimestamp);
+                    categoryDetails.get(Constants.PARENT_ID).asInt(), userId, currentTimestamp, userRootOrgId);
 
                 Map<String, Object> communityDetailsMap = objectMapper.convertValue(categoryDetails,
                     Map.class);
@@ -949,7 +980,7 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
                     return response;
                 }
                 CommunityCategory savedCategory = persistCategoryInPrimary(categoryDetails, 0,
-                    userId, currentTimestamp);
+                    userId, currentTimestamp, userRootOrgId);
                 Map<String, Object> communityDetailsMap = objectMapper.convertValue(categoryDetails,
                     Map.class);
                 esUtilService.addDocument(Constants.CATEGORY_INDEX_NAME, Constants.INDEX_TYPE,
@@ -1078,7 +1109,7 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
             return response;
         }
         try {
-            validatePayload(Constants.CATEGORY_PAYLOAD_VALIDATION_FILE, categoryDetails);
+            payloadValidation.validatePayload(Constants.CATEGORY_PAYLOAD_VALIDATION_FILE, categoryDetails);
         } catch (CustomException e) {
             log.error("Validation failed: {}", e.getMessage(), e);
             response.getParams().setStatus(Constants.FAILED);
@@ -1675,7 +1706,7 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
 
 
     private CommunityCategory persistCategoryInPrimary(JsonNode categoryDetails, Integer parentId,
-        String userId, Timestamp currentTimestamp) {
+        String userId, Timestamp currentTimestamp, String userRootOrgId) {
         log.info("CommunityEngagementService:persistCategoryInPimaryAndEs:saving");
         CommunityCategory communityCategory = new CommunityCategory();
         communityCategory.setCategoryName(categoryDetails.get(Constants.CATEGORY_NAME).asText());
@@ -1683,6 +1714,8 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
         communityCategory.setParentId(parentId);
         communityCategory.setCreatedAt(currentTimestamp);
         communityCategory.setCountOfCommunities(0L);
+        communityCategory.setDepartmentId(userRootOrgId);
+
         // Save to the repository and fetch the generated ID
         return categoryRepository.save(communityCategory);
 

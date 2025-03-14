@@ -60,10 +60,10 @@
       "epoch_millis"
     ]
   },
-  "createdByUserId": {
+  "createdBy": {
     "type": "keyword"
   },
-  "updatedByUserId": {
+  "updatedBy": {
     "type": "keyword"
   },
   "communityGuideLines": {
