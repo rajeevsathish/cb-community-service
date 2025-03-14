@@ -68,7 +68,7 @@ public class Constants {
     public static final String EXCEPTION_MSG_UPDATE = "Exception occurred while updating record to ";
     public static final String X_AUTH_USER_ORG_ID = "x-authenticated-user-orgid";
     public static final String X_AUTH_TOKEN = "x-authenticated-user-token";
-    public static final String INDEX_NAME = "community_entity";
+    public static final String INDEX_NAME = "community_entity_alias";
     public static final String ERROR = "ERROR";
     public static final String INVALID_DATA = "No data found";
     public static final String PAYLOAD_VALIDATION_FILE = "/payloadValidation/communityValidationData.json";
@@ -121,7 +121,7 @@ public class Constants {
     public static final String DESCRIPTION = "description";
     public static final String CREATED_AT = "createdAt";
     public static final String UPDATED_AT = "lastUpdatedAt";
-    public static final String CATEGORY_INDEX_NAME = "community_category_entity";
+    public static final String CATEGORY_INDEX_NAME = "community_category_entity_alias";
     public static final String SUB_CATEGORY = "subCategory";
     public static final String CATEGORY_PAYLOAD_VALIDATION_FILE = "/payloadValidation/categoryValidationFile.json";
     public static final String API_CATEGORY_READ = "api.community.category.read";
@@ -189,6 +189,14 @@ public class Constants {
     public static final String API_POPULAR_COMMUNITY = "api.popular communities";
     public static final String COUNT_OF_COMMUNITIES = "countOfCommunities";
     public static final String TOPIC_IS_INACTIVE = "Topic is inactive";
+    public static final String TABLE_USER = "user";
+    public static final String ROOT_ORG_ID = "rootOrgId";
+    public static final String FIRST_NAME = "firstname";
+    public static final String USER_ROOT_ORG_ID = "rootorgid";
+    public static final String USER_DETAILS_NOT_FOUND = "User details not found with userId";
+    public static final String ORG_TABLE = "organisation";
+    public static final String ORG_DETAILS_NOT_FOUND = "OrgDetails are not fetched for given orgId";
+    public static final String ORG_NAME_CAMEL_CASE = "orgName";
 
     private Constants() {
     }
