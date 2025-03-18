@@ -93,6 +93,9 @@ public class EsUtilServiceImpl implements EsUtilService {
     @Value("${sunbird_user_index}")
     private String sbUserIndex;
 
+    @Value("${community.index}")
+    private String communityIndex;
+
 
     @Override
     public RestStatus addDocument(
@@ -731,7 +734,7 @@ public class EsUtilServiceImpl implements EsUtilService {
             .size(0) // Do not return regular hits, we only need aggregations
             .aggregation(parentTopicsAgg);
 
-        SearchRequest searchRequest = new SearchRequest(Constants.INDEX_NAME);
+        SearchRequest searchRequest = new SearchRequest(communityIndex);
         searchRequest.source(searchSourceBuilder);
 
         // Execute the search request
@@ -836,7 +839,7 @@ public class EsUtilServiceImpl implements EsUtilService {
             sourceBuilder.query(query);
             sourceBuilder.size(0); // We are only interested in the existence
 
-            SearchRequest searchRequest = new SearchRequest(Constants.INDEX_NAME);
+            SearchRequest searchRequest = new SearchRequest(communityIndex);
             searchRequest.source(sourceBuilder);
 
             // Execute the search
