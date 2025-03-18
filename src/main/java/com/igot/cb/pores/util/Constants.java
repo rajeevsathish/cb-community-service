@@ -68,7 +68,6 @@ public class Constants {
     public static final String EXCEPTION_MSG_UPDATE = "Exception occurred while updating record to ";
     public static final String X_AUTH_USER_ORG_ID = "x-authenticated-user-orgid";
     public static final String X_AUTH_TOKEN = "x-authenticated-user-token";
-    public static final String INDEX_NAME = "community_entity_alias";
     public static final String ERROR = "ERROR";
     public static final String INVALID_DATA = "No data found";
     public static final String PAYLOAD_VALIDATION_FILE = "/payloadValidation/communityValidationData.json";
@@ -121,7 +120,6 @@ public class Constants {
     public static final String DESCRIPTION = "description";
     public static final String CREATED_AT = "createdAt";
     public static final String UPDATED_AT = "lastUpdatedAt";
-    public static final String CATEGORY_INDEX_NAME = "community_category_entity_alias";
     public static final String SUB_CATEGORY = "subCategory";
     public static final String CATEGORY_PAYLOAD_VALIDATION_FILE = "/payloadValidation/categoryValidationFile.json";
     public static final String API_CATEGORY_READ = "api.community.category.read";
