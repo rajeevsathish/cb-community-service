@@ -258,6 +258,7 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
             categoryRepository.save(category);
             Map<String, Object> communityDetailsMap = objectMapper.convertValue(category,
                 Map.class);
+            communityDetailsMap.put(Constants.STATUS, Constants.ACTIVE);
             esUtilService.addDocument(communityCategoryIndex, Constants.INDEX_TYPE,
                 String.valueOf(category.getCategoryId()), communityDetailsMap,
                 cbServerProperties.getElasticCommunityCategoryJsonPath());
