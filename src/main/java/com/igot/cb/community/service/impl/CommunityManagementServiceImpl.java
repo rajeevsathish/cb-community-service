@@ -182,7 +182,7 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
                 return response;
             }
             Map<String, Object> propertyMapOrg = new HashMap<>();
-            propertyMap.put(Constants.ID, userRootOrgId);
+            propertyMapOrg.put(Constants.ID, userRootOrgId);
             List<Map<String, Object>> orgDetails = cassandraOperation.getRecordsByPropertiesWithoutFiltering(
                 Constants.KEYSPACE_SUNBIRD, Constants.ORG_TABLE, propertyMapOrg, null, 1);
             if (ObjectUtils.isEmpty(orgDetails)) {
