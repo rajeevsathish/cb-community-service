@@ -706,6 +706,16 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
             }
             List<String> userListWithPrefix = new ArrayList<>(uniqueUserIds);
             List<Object> userList = fetchDataForKeys(userListWithPrefix);
+            if (userList != null) {
+                userList.replaceAll(obj -> {
+                    if (obj instanceof Map) {
+                        Map<String, Object> map = (Map<String, Object>) obj;
+                        map.computeIfPresent(Constants.DESIGNATION, (k, v) ->
+                            Constants.NULL_STRING.equalsIgnoreCase(String.valueOf(v)) ? "" : v);
+                    }
+                    return obj;
+                });
+            }
             response.getResult().put(Constants.USER_DETAILS,
                 objectMapper.convertValue(userList, new TypeReference<Object>() {
                 }));
