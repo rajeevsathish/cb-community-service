@@ -197,6 +197,8 @@ public class Constants {
     public static final String ORG_TABLE = "organisation";
     public static final String ORG_DETAILS_NOT_FOUND = "OrgDetails are not fetched for given orgId";
     public static final String ORG_NAME_CAMEL_CASE = "orgName";
+    public static final String DESIGNATION = "designation";
+    public static final String NULL_STRING = "null";
 
     private Constants() {
     }
