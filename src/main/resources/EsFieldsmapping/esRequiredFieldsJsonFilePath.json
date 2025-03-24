@@ -95,5 +95,18 @@
   },
   "orgName": {
     "type": "keyword"
+  },
+  "publishedOn": {
+    "type": "date",
+    "format": [
+      "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+      "epoch_millis"
+    ]
+  },
+  "countOfModerators": {
+    "type": "long"
+  },
+  "publishedBy": {
+    "type": "keyword"
   }
 }

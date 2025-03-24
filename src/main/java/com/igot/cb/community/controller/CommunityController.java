@@ -157,4 +157,11 @@ public class CommunityController {
         ApiResponse response = communityManagementService.searchTopic(searchCriteria);
         return new ResponseEntity<>(response, response.getResponseCode());
     }
+
+    @PostMapping("/publish")
+    public ResponseEntity<ApiResponse> publish(@RequestBody JsonNode communityDetails,
+        @RequestHeader(Constants.X_AUTH_TOKEN) String authToken) {
+        ApiResponse response = communityManagementService.publish(communityDetails, authToken);
+        return new ResponseEntity<>(response, response.getResponseCode());
+    }
 }

@@ -32,10 +32,10 @@
         "epoch_millis"
       ]
     },
-    "createdUserId": {
+    "createdBy": {
       "type": "string"
     },
-    "updatedUserId": {
+    "updatedBy": {
       "type": "string"
     },
     "departmentId": {

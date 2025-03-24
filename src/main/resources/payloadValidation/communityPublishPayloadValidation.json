@@ -1,0 +1,206 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "communityId": {
+      "type": "string"
+    },
+    "communityName": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 256
+    },
+    "description": {
+      "type": "string"
+    },
+    "communityAccessLevel": {
+      "type": "string"
+    },
+    "orgId": {
+      "type": "string"
+    },
+    "posterImageUrl": {
+      "type": "string"
+    },
+    "imageUrl": {
+      "type": "string"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "topicName": {
+      "type": "string"
+    },
+    "countOfPeopleJoined": {
+      "type": "integer"
+    },
+    "communityTagId": {
+      "type": "string"
+    },
+    "topicId": {
+      "type": "integer"
+    },
+    "createdOn": {
+      "type": "date",
+      "format": [
+        "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+        "epoch_millis"
+      ]
+    },
+    "updatedOn": {
+      "type": "date",
+      "format": [
+        "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+        "epoch_millis"
+      ]
+    },
+    "createdBy": {
+      "type": "string"
+    },
+    "updatedBy": {
+      "type": "string"
+    },
+    "communityGuideLines": {
+      "type": "string"
+    },
+    "competencyArea": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "competencyTheme": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "competencySubTheme": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "countOfPeopleLiked": {
+      "type": "integer"
+    },
+    "countOfPostCreated": {
+      "type": "integer"
+    },
+    "competencies_v6": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "competencyAreaIdentifier": {
+            "type": "string"
+          },
+          "competencyAreaRefId": {
+            "type": "string"
+          },
+          "competencySubThemeAdditionalProperties": {
+            "type": "object",
+            "properties": {
+              "displayName": {
+                "type": "string"
+              },
+              "timeStamp": {
+                "type": "integer"
+              }
+            }
+          },
+          "competencyThemeRefId": {
+            "type": "string"
+          },
+          "competencyAreaDescription": {
+            "type": "string"
+          },
+          "competencySubThemeIdentifier": {
+            "type": "string"
+          },
+          "competencySubThemeDescription": {
+            "type": "string"
+          },
+          "competencyThemeName": {
+            "type": "string"
+          },
+          "competencyThemeIdentifier": {
+            "type": "string"
+          },
+          "competencyThemeType": {
+            "type": "string"
+          },
+          "competencySubThemeName": {
+            "type": "string"
+          },
+          "competencySubThemeRefId": {
+            "type": "string"
+          },
+          "competencyThemeAdditionalProperties": {
+            "type": "object",
+            "properties": {
+              "displayName": {
+                "type": "string"
+              },
+              "timeStamp": {
+                "type": "integer"
+              }
+            }
+          },
+          "competencyAreaName": {
+            "type": "string"
+          },
+          "competencyThemeDescription": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "countOfAnswerPost": {
+      "type": "integer"
+    },
+    "createdBy": {
+      "type": "string"
+    },
+    "orgName": {
+      "type": "string"
+    },
+    "moderators": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "moderatorId": {
+            "type": "string"
+          },
+          "moderatorName": {
+            "type": "string"
+          }
+        }
+      }
+    }
+},
+  "required": [
+    "communityName",
+    "description",
+    "communityAccessLevel",
+    "orgId",
+    "topicName",
+    "topicId",
+    "createdBy",
+    "orgName",
+    "communityId",
+    "competencies_v6",
+    "imageUrl",
+    "communityGuideLines",
+    "moderators",
+    "competencyArea",
+    "competencyTheme",
+    "competencySubTheme",
+    "updatedBy"
+  ],
+  "additionalProperties": false
+}

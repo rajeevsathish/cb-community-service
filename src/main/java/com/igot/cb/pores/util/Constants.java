@@ -189,6 +189,13 @@ public class Constants {
     public static final String API_POPULAR_COMMUNITY = "api.popular communities";
     public static final String COUNT_OF_COMMUNITIES = "countOfCommunities";
     public static final String TOPIC_IS_INACTIVE = "Topic is inactive";
+    public static final String DRAFT = "draft";
+    public static final String PUBLISHED_ON = "publishedOn";
+    public static final String NO_OF_MODERATORS = "countOfModerators";
+    public static final String API_COMMUNITY_PUBLISH = "api.community.publish";
+    public static final String COMMUNITY_PUBLISH_PAYLOAD_VALIDATION_FILE = "/payloadValidation/communityPublishPayloadValidation.json";
+    public static final String PUBLISHED_BY = "publishedBy";
+    public static final String  MODERATORS = "moderators";
     public static final String TABLE_USER = "user";
     public static final String ROOT_ORG_ID = "rootOrgId";
     public static final String FIRST_NAME = "firstname";
