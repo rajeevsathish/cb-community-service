@@ -1,8 +1,12 @@
 package com.igot.cb.pores.elasticsearch.config;
 
+import java.util.ArrayList;
+import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestClientBuilder;
@@ -13,6 +17,7 @@ import org.springframework.context.annotation.Configuration;
 
 
 @Configuration
+@Slf4j
 public class EsConfig  {
     @Value("${elasticsearch.host}")
     private String elasticsearchHost;
@@ -30,7 +35,7 @@ public class EsConfig  {
     private String sbESClientHost;
 
     @Value("${elasticsearch.sbESClient.port}")
-    private int sbESClientPort;
+    private String sbESClientPort;
 
     @Value("${elasticsearch.sbESClient.username}")
     private String sbESClientUsername;
@@ -46,7 +51,38 @@ public class EsConfig  {
 
     @Bean(name = "sbESClient")
     public RestHighLevelClient sbESClient() {
-        return createClient(sbESClientHost, sbESClientPort, sbESClientUsername, sbESClientPassword);
+        List<String> hosts = new ArrayList<>();
+        List<Integer> ports = new ArrayList<>();
+        String[] splitedHost = sbESClientHost.split(",");
+        String[] splitedPort = sbESClientPort.split(",");
+
+        for (String val : splitedHost) {
+            hosts.add(val);
+        }
+
+        for (String val : splitedPort) {
+            ports.add(Integer.parseInt(val));
+        }
+
+        HttpHost[] httpHosts = new HttpHost[hosts.size()];
+        for (int i = 0; i < hosts.size(); i++) {
+            httpHosts[i] = new HttpHost(hosts.get(i), ports.get(i));
+        }
+
+        RestClientBuilder builder = RestClient.builder(httpHosts)
+            .setRequestConfigCallback(requestConfigBuilder -> requestConfigBuilder
+                .setConnectTimeout(5000) // 5 seconds connect timeout
+                .setSocketTimeout(60000) // 60 seconds socket timeout
+            )
+            .setHttpClientConfigCallback(httpClientBuilder -> httpClientBuilder
+                .setDefaultRequestConfig(RequestConfig.custom()
+                    .setConnectionRequestTimeout(60000) // 60 seconds max retry timeout
+                    .build())
+            ); // 60 seconds max retry timeout
+
+        RestHighLevelClient restClient = new RestHighLevelClient(builder);
+        log.info("ElasticsearchConfig:: RestHighLevelClient initialisation done.");
+        return restClient;
     }
 
     private RestHighLevelClient createClient(String host, int port, String username, String password) {
