@@ -15,6 +15,7 @@ import com.igot.cb.community.kafka.producer.Producer;
 import com.igot.cb.community.repository.CommunityCategoryRepository;
 import com.igot.cb.community.repository.CommunityEngagementRepository;
 import com.igot.cb.community.service.CommunityManagementService;
+import com.igot.cb.community.service.UserService;
 import com.igot.cb.pores.cache.CacheService;
 import com.igot.cb.pores.elasticsearch.dto.SearchCriteria;
 import com.igot.cb.pores.elasticsearch.dto.SearchResult;
@@ -31,6 +32,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.elasticsearch.action.search.SearchRequest;
@@ -119,6 +121,9 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
     private RedisTemplate<String, Object> objectRedisTemplate;
 
     private BaseStorageService storageService = null;
+
+    @Autowired
+    private UserService userService;
 
     @PostConstruct
     public void init() {
@@ -716,6 +721,21 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
                     }
                     return obj;
                 });
+            }
+            Map<String, Object> userInfoList = userList.stream()
+                .map(user -> (Map<String, Object>) user)
+                .collect(Collectors.toMap(
+                    user -> Constants.USER_PREFIX + user.get(Constants.USER_ID_KEY).toString(),
+                    user -> user));
+            // Remove found IDs from orgIdSet
+            List<String> missingUserIds = userListWithPrefix.stream()
+                .map(id -> id.replace(Constants.USER_PREFIX, ""))
+                .filter(id -> !userInfoList.containsKey(Constants.USER_PREFIX + id))
+                .collect(Collectors.toList());
+
+            if (!missingUserIds.isEmpty()) {
+                List<Object> cassandraResults = userService.fetchUserFromprimary(missingUserIds);
+                userList.addAll(cassandraResults);
             }
             response.getResult().put(Constants.USER_DETAILS,
                 objectMapper.convertValue(userList, new TypeReference<Object>() {

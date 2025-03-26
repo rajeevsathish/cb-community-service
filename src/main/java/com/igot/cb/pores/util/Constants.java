@@ -199,6 +199,20 @@ public class Constants {
     public static final String ORG_NAME_CAMEL_CASE = "orgName";
     public static final String DESIGNATION = "designation";
     public static final String NULL_STRING = "null";
+    public static final Object USER_ID_REDIS_KEY = "user_id";
+    public static final String PROFILE_DETAILS = "profiledetails";
+    public static final String USER_ID_KEY = "user_id";
+    public static final String FIRST_NAME_KEY = "first_name";
+    public static final String PROFILE_IMG_KEY = "user_profile_img_url";
+    public static final String DESIGNATION_KEY = "designation";
+    public static final String DEPARTMENT_KEY = "departmentName";
+    public static final String EMPLOYMENT_DETAILS = "employmentDetails";
+    public static final String DEPARTMENT = "department";
+    public static final String PROFILE_IMG = "profileImageUrl";
+    public static final String PROFILE_STATUS = "userProfileStatus";
+    public static final String PROFILE_STATUS_KEY = "profileStatus";
+    public static final String CHANNEL = "channel";
+    public static final String PROFESSIONAL_DETAILS = "professionalDetails";
 
     private Constants() {
     }
