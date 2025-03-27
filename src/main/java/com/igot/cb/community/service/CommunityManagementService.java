@@ -50,4 +50,6 @@ public interface CommunityManagementService {
     ApiResponse uploadFile(MultipartFile multipartFile, String communityId);
 
     ApiResponse searchTopic(SearchCriteria searchCriteria);
+
+    ApiResponse listAllCommunitiesJoinedByUser(String authToken);
 }

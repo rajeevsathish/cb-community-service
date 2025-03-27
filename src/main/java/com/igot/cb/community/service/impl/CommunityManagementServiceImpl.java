@@ -23,16 +23,12 @@ import com.igot.cb.pores.elasticsearch.service.EsUtilService;
 import com.igot.cb.pores.exceptions.CustomException;
 import com.igot.cb.pores.util.*;
 import com.igot.cb.transactional.cassandrautils.CassandraOperation;
-import com.networknt.schema.JsonSchema;
-import com.networknt.schema.JsonSchemaFactory;
-import com.networknt.schema.ValidationMessage;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.elasticsearch.action.search.SearchRequest;
@@ -56,7 +52,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 
-import java.io.InputStream;
 import java.sql.Timestamp;
 import java.util.*;
 import org.springframework.util.CollectionUtils;
@@ -1692,6 +1687,82 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
             throw new CustomException(Constants.ERROR, "error while processing",
                 HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    @Override
+    public ApiResponse listAllCommunitiesJoinedByUser(String authToken) {
+        log.info("CommunityEngagementService:listAllCommunitiesJoinedByUser::inside method");
+        ApiResponse response = ProjectUtil.createDefaultResponse(
+            Constants.API_LIST_ALL_COMMUNITIES_JOINED);
+        try {
+            String userId = accessTokenValidator.verifyUserToken(authToken);
+            if (StringUtils.isBlank(userId)) {
+                response.getParams().setErrMsg(Constants.USER_ID_DOESNT_EXIST);
+                response.setResponseCode(HttpStatus.BAD_REQUEST);
+                return response;
+            }
+
+            Map<String, Object> propertyMap = new HashMap<>();
+            propertyMap.put(Constants.USER_ID, userId);
+            List<String> fields = Arrays.asList(Constants.COMMUNITY_ID, Constants.STATUS);
+            List<Map<String, Object>> userCommunityDetails = cassandraOperation.getRecordsByPropertiesWithoutFiltering(
+                Constants.KEYSPACE_SUNBIRD, Constants.USER_COMMUNITY_TABLE, propertyMap, fields,
+                null);
+
+            List<Object> communityEntityList = new ArrayList<>();
+            if (!userCommunityDetails.isEmpty()) {
+                for (Map<String, Object> communityDetail : userCommunityDetails) {
+                    Boolean status = (Boolean) communityDetail.get(Constants.STATUS);
+                    if (Boolean.TRUE.equals(status)) {
+                        String communityId = (String) communityDetail.get(
+                            Constants.COMMUNITY_ID_LOWERCASE);
+                        String cachedJson = cacheService.getCache(communityId);
+                        Map<String, Object> communityMap = null;
+
+                        if (StringUtils.isNotEmpty(cachedJson)) {
+                            communityMap = parseCommunityMap(cachedJson);
+                        } else {
+                            Optional<CommunityEntity> communityEntityOptional = communityEngagementRepository.findByCommunityIdAndIsActive(
+                                communityId, true);
+                            if (communityEntityOptional.isPresent()) {
+                                communityMap = objectMapper.convertValue(
+                                    communityEntityOptional.get().getData(),
+                                    new TypeReference<Map<String, Object>>() {
+                                    });
+                                cacheService.putCache(communityId,
+                                    communityEntityOptional.get().getData());
+                            }
+                        }
+
+                        if (communityMap != null && communityMap.containsKey(
+                            Constants.COMMUNITY_NAME) && communityMap.containsKey(
+                            Constants.COMMUNITY_ID)) {
+                            Map<String, String> resultMap = new HashMap<>();
+                            resultMap.put(Constants.COMMUNITY_NAME,
+                                (String) communityMap.get(Constants.COMMUNITY_NAME));
+                            resultMap.put(Constants.COMMUNITY_ID_LOWERCASE,
+                                (String) communityMap.get(Constants.COMMUNITY_ID));
+                            communityEntityList.add(resultMap);
+                        }
+                    }
+                }
+            }
+
+            response.getResult().put(Constants.COMMUNITY_ID,
+                objectMapper.convertValue(communityEntityList, new TypeReference<Object>() {
+                }));
+            return response;
+
+        } catch (Exception e) {
+            logger.error("Error while fetching all the communities joined by loggedIn user:",
+                e.getMessage(), e);
+            throw new CustomException(Constants.ERROR, "error while processing",
+                HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private Map<String, Object> parseCommunityMap(String cachedJson) throws JsonProcessingException {
+        return objectMapper.readValue(cachedJson, new TypeReference<Map<String, Object>>() {});
     }
 
     public ApiResponse uploadFile(File file, String cloudFolderName, String containerName) {
