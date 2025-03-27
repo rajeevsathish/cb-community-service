@@ -220,6 +220,7 @@ public class Constants {
     public static final String PROFILE_STATUS_KEY = "profileStatus";
     public static final String CHANNEL = "channel";
     public static final String PROFESSIONAL_DETAILS = "professionalDetails";
+    public static final String API_LIST_ALL_COMMUNITIES_JOINED = "api.list.all.communities.joined.by.user";
 
     private Constants() {
     }

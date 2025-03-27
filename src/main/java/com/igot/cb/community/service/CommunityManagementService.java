@@ -51,5 +51,7 @@ public interface CommunityManagementService {
 
     ApiResponse searchTopic(SearchCriteria searchCriteria);
 
+    ApiResponse listAllCommunitiesJoinedByUser(String authToken);
+
     ApiResponse publish(JsonNode communityDetails, String authToken);
 }

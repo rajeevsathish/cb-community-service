@@ -158,6 +158,12 @@ public class CommunityController {
         return new ResponseEntity<>(response, response.getResponseCode());
     }
 
+    @GetMapping("/user/communities/all")
+    public ResponseEntity<ApiResponse> listAllCommunitiesJoinedByUser(@RequestHeader(Constants.X_AUTH_TOKEN) String authToken) {
+        ApiResponse response = communityManagementService.listAllCommunitiesJoinedByUser(authToken);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
     @PostMapping("/publish")
     public ResponseEntity<ApiResponse> publish(@RequestBody JsonNode communityDetails,
         @RequestHeader(Constants.X_AUTH_TOKEN) String authToken) {
