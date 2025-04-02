@@ -170,4 +170,10 @@ public class CommunityController {
         ApiResponse response = communityManagementService.publish(communityDetails, authToken);
         return new ResponseEntity<>(response, response.getResponseCode());
     }
+
+    @PostMapping("/mdo/search")
+    public ResponseEntity<ApiResponse> searchCommunityFromEs(@RequestBody SearchCriteria searchCriteria) {
+        ApiResponse response = communityManagementService.searchCommunityFromPrimary(searchCriteria);
+        return new ResponseEntity<>(response, response.getResponseCode());
+    }
 }

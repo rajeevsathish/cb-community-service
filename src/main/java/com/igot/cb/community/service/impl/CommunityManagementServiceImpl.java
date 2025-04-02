@@ -1836,6 +1836,80 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
         }
     }
 
+    @Override
+    public ApiResponse searchCommunityFromPrimary(SearchCriteria searchCriteria) {
+        log.info("CommunityEngagementService:searchCommunity::inside method");
+        ApiResponse response = ProjectUtil.createDefaultResponse(Constants.API_COMMUNITY_SEARCH);
+        try {
+            SearchResult searchResult = new SearchResult();
+            String searchString = searchCriteria.getSearchString();
+            if (searchString != null && searchString.length() < 2) {
+                createErrorResponse(response, Constants.MINIMUM_CHARACTERS_NEEDED,
+                    HttpStatus.BAD_REQUEST, Constants.FAILED_CONST);
+                return response;
+            }
+            return searchCommunityFromEs(searchCriteria, response, communityIndex);
+        } catch (Exception e) {
+            logger.error("Error occured while searching:", e);
+            throw new CustomException(Constants.ERROR, "error while processing",
+                HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private ApiResponse searchCommunityFromEs(SearchCriteria searchCriteria, ApiResponse response,
+        String communityIndex) {
+        try {
+            SearchResult searchResult = esUtilService.searchDocuments(Constants.INDEX_NAME,
+                searchCriteria);
+            if (!searchResult.getData().isEmpty()) {
+                Set<String> uniqueOrgIds = new HashSet<>();
+                // Extract 'data' field from searchResult
+                JsonNode dataNode = searchResult.getData();
+                if (dataNode != null && dataNode.isArray()) {
+                    for (JsonNode item : dataNode) {
+                        if (item.has(Constants.CREATED_BY) && !item.get(Constants.CREATED_BY)
+                            .isNull()) {
+                            JsonNode createdByNode = item.get(Constants.CREATED_BY);
+                            if (createdByNode.isTextual()) {
+                                uniqueOrgIds.add(Constants.USER_PREFIX
+                                    + createdByNode.asText()); // Add prefix directly
+                            }
+                        }
+                    }
+                }
+                List<String> userIdList = new ArrayList<>(
+                    uniqueOrgIds != null ? uniqueOrgIds : Collections.emptySet());
+// Convert Set to List
+                List<Object> userList = fetchDataForKeys(userIdList);
+                if (userList != null) {
+                    userList.replaceAll(obj -> {
+                        if (obj instanceof Map) {
+                            Map<String, Object> map = (Map<String, Object>) obj;
+                            map.computeIfPresent(Constants.DESIGNATION, (k, v) ->
+                                Constants.NULL_STRING.equalsIgnoreCase(String.valueOf(v)) ? "" : v);
+                        }
+                        return obj;
+                    });
+                    List<Map<String, Object>> userInfoList = userList.stream()
+                        .filter(obj -> obj instanceof Map) // Ensure the object is a Map
+                        .map(obj -> (Map<String, Object>) obj) // Cast to Map<String, Object>
+                        .collect(Collectors.toList());
+                    if (userInfoList != null) {
+                        searchResult.setAdditionalInfo(userInfoList);
+                    }
+                }
+
+            }
+            response.getResult().put(Constants.SEARCH_RESULTS, searchResult);
+            createSuccessResponse(response);
+            return response;
+        } catch (Exception e) {
+            logger.error("Exception occured while fetching and caching in search API:", e);
+            throw new CustomException(Constants.ERROR, "error while processing",
+                HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     public ApiResponse uploadFile(File file, String cloudFolderName, String containerName) {
         ApiResponse response = ProjectUtil.createDefaultResponse(Constants.UPLOAD_FILE);
         try {
