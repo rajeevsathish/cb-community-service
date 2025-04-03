@@ -179,7 +179,8 @@
           "moderatorName": {
             "type": "string"
           }
-        }
+        },
+        "required": ["moderatorId"]
       }
     }
 },

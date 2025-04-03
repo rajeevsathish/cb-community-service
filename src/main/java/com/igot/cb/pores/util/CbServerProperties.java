@@ -44,4 +44,22 @@ public class CbServerProperties {
     @Value("${cloud.storage.endpoint}")
     private String cloudStorageEndpoint;
 
+    @Value("${community.moderator.email}")
+    private String communityModeratorTemplate;
+
+    @Value("${notification.support.mail}")
+    private String supportEmail;
+
+    @Value("${notify.service.host}")
+    private String notifyServiceHost;
+
+    @Value("${notify.service.path.async}")
+    private String notifyServicePathAsync;
+
+    @Value("${domain.url}")
+    private String domainUrl;
+
+    @Value("${fixed.community.url}")
+    private String fixedCommunityUrl;
+
 }

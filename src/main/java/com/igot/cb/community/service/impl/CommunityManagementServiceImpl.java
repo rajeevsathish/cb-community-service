@@ -15,6 +15,7 @@ import com.igot.cb.community.kafka.producer.Producer;
 import com.igot.cb.community.repository.CommunityCategoryRepository;
 import com.igot.cb.community.repository.CommunityEngagementRepository;
 import com.igot.cb.community.service.CommunityManagementService;
+import com.igot.cb.community.service.NotificationService;
 import com.igot.cb.community.service.UserService;
 import com.igot.cb.pores.cache.CacheService;
 import com.igot.cb.pores.elasticsearch.dto.SearchCriteria;
@@ -119,6 +120,9 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private NotificationService notificationService;
 
     @PostConstruct
     public void init() {
@@ -1825,6 +1829,17 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
             cacheService.deleteCache(generateRedisJwtTokenKey(createDefaultSearchPayload()));
             cacheService.deleteCache(
                 generateRedisJwtTokenKey(createDefaultSearchCriteriaForTopic()));
+            if (dataNode.hasNonNull(Constants.MODERATORS) && dataNode.get(Constants.MODERATORS).isArray()) {
+                JsonNode moderatorsNode = dataNode.get(Constants.MODERATORS);
+                List<String> moderatorIds = new ArrayList<>();
+                for (JsonNode moderator : moderatorsNode) {
+                    if (moderator.hasNonNull(Constants.MODERATOR_ID)) {
+                        moderatorIds.add(moderator.get(Constants.MODERATOR_ID).asText());
+                    }
+                }
+                notificationService.sendNotification(moderatorIds, communityId, userId, dataNode.get(Constants.COMMUNITY_NAME).asText());
+                // Now you have a list of moderatorIds
+            }
             return response;
 
 
