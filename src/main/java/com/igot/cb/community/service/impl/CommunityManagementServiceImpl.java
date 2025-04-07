@@ -438,6 +438,13 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
                         ((ObjectNode) dataNode).put(fieldName, communityDetails.get(fieldName));
                     }
                 }
+                if (esUtilService.isDuplicateCommunity(dataNode.get(Constants.ORG_ID).asText(),
+                    dataNode.get(Constants.COMMUNITY_NAME).asText(), dataNode.get(Constants.TOPIC_ID).asLong(), dataNode.get(Constants.COMMUNITY_ID).asText())) {
+                    response.getParams().setStatus(Constants.FAILED);
+                    response.getParams().setErrMsg("Community with the given orgId and communityName already exists in this topic, or it's in blocked state.");
+                    response.setResponseCode(HttpStatus.CONFLICT);
+                    return response;
+                }
                 updateCommunityDetails(communityEntityOptional.get(),userId,dataNode, Constants.DRAFT);
                 response.getResult().put(Constants.RESPONSE,
                         "Updated the community with id: " + communityId);
@@ -1790,6 +1797,13 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
         }
         try {
             payloadValidation.validatePayload(Constants.COMMUNITY_PUBLISH_PAYLOAD_VALIDATION_FILE, communityDetails);
+            if (esUtilService.isDuplicateCommunity(communityDetails.get(Constants.ORG_ID).asText(),
+                communityDetails.get(Constants.COMMUNITY_NAME).asText(), communityDetails.get(Constants.TOPIC_ID).asLong(), communityDetails.get(Constants.COMMUNITY_ID).asText())) {
+                response.getParams().setStatus(Constants.FAILED);
+                response.getParams().setErrMsg("Community with the given orgId and communityName already exists in this topic, or it's in blocked state.");
+                response.setResponseCode(HttpStatus.CONFLICT);
+                return response;
+            }
         } catch (CustomException e) {
             log.error("Validation failed: {}", e.getMessage(), e);
             response.getParams().setStatus(Constants.FAILED);

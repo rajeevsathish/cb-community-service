@@ -854,6 +854,38 @@ public class EsUtilServiceImpl implements EsUtilService {
     }
 
     @Override
+    public boolean isDuplicateCommunity(String orgId, String communityName, long topicId,
+        String excludeCommunityId) {
+        logger.info("EsUtilService::isDuplicateCommunity: inside method");
+
+        try {
+            BoolQueryBuilder query = QueryBuilders.boolQuery()
+                .must(QueryBuilders.termQuery(Constants.ORG_ID + ".keyword", orgId))
+                .must(QueryBuilders.termQuery(Constants.COMMUNITY_NAME + ".keyword", communityName))
+                .must(QueryBuilders.termQuery(Constants.TOPIC_ID, topicId));
+
+            if (excludeCommunityId != null && !excludeCommunityId.isEmpty()) {
+                query.mustNot(QueryBuilders.termQuery("_id", excludeCommunityId));
+            }
+
+            SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
+            sourceBuilder.query(query);
+            sourceBuilder.size(0);
+
+            SearchRequest searchRequest = new SearchRequest(communityIndex);
+            searchRequest.source(sourceBuilder);
+
+            SearchResponse searchResponse = elasticsearchClient.search(searchRequest,
+                RequestOptions.DEFAULT);
+            return searchResponse.getHits().getTotalHits() > 0;
+
+        } catch (Exception e) {
+            log.error("Error checking community existence in Elasticsearch: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    @Override
     public SearchResult searchDocumentsByField(String indexName, String field, int size,
         String order) {
         try {
