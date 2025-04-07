@@ -561,7 +561,7 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
         } else {
             ((ObjectNode) dataNode).put(Constants.NO_OF_MODERATORS, 0L);
         }
-
+        communityEntity.setData(dataNode);
         communityEngagementRepository.save(communityEntity);
         Map<String, Object> map = objectMapper.convertValue(dataNode, Map.class);
         esUtilService.updateDocument(communityIndex, Constants.INDEX_TYPE,
