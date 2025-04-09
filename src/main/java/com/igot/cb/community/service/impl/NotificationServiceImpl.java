@@ -58,6 +58,7 @@ public class NotificationServiceImpl implements NotificationService {
   @Override
   public void sendNotification(List<String> moderatorIds, String communityId, String userId,
       String communityName) {
+    logger.info("NotificationService::sendNotification:Sending notification to moderators");
     List<String> fields = Arrays.asList(Constants.FIRST_NAME);
     moderatorIds.add(userId);
     Map<String, Object> propertiesMap = new HashMap<>();
@@ -124,6 +125,7 @@ public class NotificationServiceImpl implements NotificationService {
   }
 
   private void sendNotificationToRecipients(Map<String, Object> mailNotificationDetails) {
+    logger.info("NotificationService::sendNotificationToRecipients:Sending notification to moderators");
     Map<String, Object> params = new HashMap<>();
     NotificationAsyncRequest notificationRequest = new NotificationAsyncRequest();
     Map<String, Object> action = new HashMap<>();
@@ -161,6 +163,7 @@ public class NotificationServiceImpl implements NotificationService {
   }
 
   private void sendNotification(Map<String, Object> request) {
+    logger.info("NotificationService::sendNotification:Sending notification to moderators");
     StringBuilder builder = new StringBuilder();
     builder.append(props.getNotifyServiceHost()).append(props.getNotifyServicePathAsync());
     try {

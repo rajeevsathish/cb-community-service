@@ -179,11 +179,24 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
             }
 
             if (esUtilService.doesCommunityExist(userRootOrgId,
-                communityDetails.get(Constants.COMMUNITY_NAME).asText(), communityDetails.get(Constants.TOPIC_ID).asLong())) {
+                communityDetails.get(Constants.COMMUNITY_NAME).asText())) {
                 response.getParams().setStatus(Constants.FAILED);
                 response.getParams().setErrMsg("Community with the given orgId and communityName already exists in this topic. or its in blocked state.");
                 response.setResponseCode(HttpStatus.CONFLICT);
                 return response;
+            }
+            boolean isCommunityCreationAllowed = false; // Default value
+            if (communityDetails.has(Constants.CommunityCreationAllowed)) {
+                isCommunityCreationAllowed = communityDetails.get(Constants.CommunityCreationAllowed).asBoolean();
+            }
+
+            if (!isCommunityCreationAllowed) {
+                if (esUtilService.doesCommunityNameExist(communityDetails.get(Constants.COMMUNITY_NAME).asText())) {
+                    response.getParams().setStatus(Constants.FAILED);
+                    response.getParams().setErrMsg("Community with the given communityName already present in another organisation");
+                    response.setResponseCode(HttpStatus.PRECONDITION_FAILED);
+                    return response;
+                }
             }
             Map<String, Object> propertyMapOrg = new HashMap<>();
             propertyMapOrg.put(Constants.ID, userRootOrgId);
@@ -439,12 +452,30 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
                     }
                 }
                 if (esUtilService.isDuplicateCommunity(dataNode.get(Constants.ORG_ID).asText(),
-                    dataNode.get(Constants.COMMUNITY_NAME).asText(), dataNode.get(Constants.TOPIC_ID).asLong(), dataNode.get(Constants.COMMUNITY_ID).asText())) {
+                    dataNode.get(Constants.COMMUNITY_NAME).asText(), dataNode.get(Constants.COMMUNITY_ID).asText())) {
                     response.getParams().setStatus(Constants.FAILED);
                     response.getParams().setErrMsg("Community with the given orgId and communityName already exists in this topic, or it's in blocked state.");
                     response.setResponseCode(HttpStatus.CONFLICT);
                     return response;
                 }
+                boolean isCommunityCreationAllowed = false; // Default value
+                if (communityDetails.has(Constants.CommunityCreationAllowed)) {
+                    isCommunityCreationAllowed = communityDetails.get(
+                        Constants.CommunityCreationAllowed).asBoolean();
+                }
+
+                if (!isCommunityCreationAllowed) {
+                    if (esUtilService.doesCommunityNameExistForPublish(
+                        communityDetails.get(Constants.COMMUNITY_NAME).asText(),
+                        dataNode.get(Constants.COMMUNITY_ID).asText())) {
+                        response.getParams().setStatus(Constants.FAILED);
+                        response.getParams().setErrMsg(
+                            "Community with the given communityName already present in another organisation");
+                        response.setResponseCode(HttpStatus.PRECONDITION_FAILED);
+                        return response;
+                    }
+                }
+
                 updateCommunityDetails(communityEntityOptional.get(),userId,dataNode, Constants.DRAFT);
                 response.getResult().put(Constants.RESPONSE,
                         "Updated the community with id: " + communityId);
@@ -1798,11 +1829,28 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
         try {
             payloadValidation.validatePayload(Constants.COMMUNITY_PUBLISH_PAYLOAD_VALIDATION_FILE, communityDetails);
             if (esUtilService.isDuplicateCommunity(communityDetails.get(Constants.ORG_ID).asText(),
-                communityDetails.get(Constants.COMMUNITY_NAME).asText(), communityDetails.get(Constants.TOPIC_ID).asLong(), communityDetails.get(Constants.COMMUNITY_ID).asText())) {
+                communityDetails.get(Constants.COMMUNITY_NAME).asText(), communityDetails.get(Constants.COMMUNITY_ID).asText())) {
                 response.getParams().setStatus(Constants.FAILED);
                 response.getParams().setErrMsg("Community with the given orgId and communityName already exists in this topic, or it's in blocked state.");
                 response.setResponseCode(HttpStatus.CONFLICT);
                 return response;
+            }
+            boolean isCommunityCreationAllowed = false; // Default value
+            if (communityDetails.has(Constants.CommunityCreationAllowed)) {
+                isCommunityCreationAllowed = communityDetails.get(
+                    Constants.CommunityCreationAllowed).asBoolean();
+            }
+
+            if (!isCommunityCreationAllowed) {
+                if (esUtilService.doesCommunityNameExistForPublish(
+                    communityDetails.get(Constants.COMMUNITY_NAME).asText(),
+                    communityDetails.get(Constants.COMMUNITY_ID).asText())) {
+                    response.getParams().setStatus(Constants.FAILED);
+                    response.getParams().setErrMsg(
+                        "Community with the given communityName already present in another organisation");
+                    response.setResponseCode(HttpStatus.PRECONDITION_FAILED);
+                    return response;
+                }
             }
         } catch (CustomException e) {
             log.error("Validation failed: {}", e.getMessage(), e);

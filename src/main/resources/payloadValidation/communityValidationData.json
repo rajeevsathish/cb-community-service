@@ -181,6 +181,9 @@
           }
         }
       }
+    },
+    "isCommunityCreationAllowed": {
+      "type": "boolean"
     }
   },
   "required": [

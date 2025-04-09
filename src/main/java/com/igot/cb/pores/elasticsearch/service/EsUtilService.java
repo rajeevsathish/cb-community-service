@@ -39,7 +39,11 @@ public interface EsUtilService {
 
   Boolean updateUserIndex (String userId, String communityId, Boolean append);
 
-  public Boolean doesCommunityExist(String orgId, String communityName, long topicId);
+  public Boolean doesCommunityExist(String orgId, String communityName);
 
-  boolean isDuplicateCommunity(String orgId, String communityName, long topicId, String excludeCommunityId);
+  boolean isDuplicateCommunity(String orgId, String communityName, String excludeCommunityId);
+
+  public Boolean doesCommunityNameExist(String communityName);
+
+  public Boolean doesCommunityNameExistForPublish(String communityName, String communityId);
 }

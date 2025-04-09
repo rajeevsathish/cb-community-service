@@ -240,6 +240,7 @@ public class Constants {
     public static final String MDO_LEADER_NAME = "mdo_leader_name";
     public static final String COMMUNITY_NAME_TAG = "community_name";
     public static final String MODERATOR_NAME = "moderator_name";
+    public static String CommunityCreationAllowed = "isCommunityCreationAllowed";
 
     private Constants() {
     }

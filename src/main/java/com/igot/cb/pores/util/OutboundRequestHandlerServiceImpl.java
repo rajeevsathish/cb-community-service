@@ -178,6 +178,7 @@ public class OutboundRequestHandlerServiceImpl {
   }
 
   public Map<String, Object> fetchResultUsingPost(String uri, Object request, Map<String, String> headersValues) {
+    log.info("OutboundRequestHandlerService::fetchResultUsingPost:inside the method");
     ObjectMapper mapper = new ObjectMapper();
     mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
     Map<String, Object> response = null;
@@ -195,6 +196,7 @@ public class OutboundRequestHandlerServiceImpl {
         str.append("Request: ").append(mapper.writeValueAsString(request)).append(System.lineSeparator());
         log.debug(str.toString());
       }
+      log.info("OutboundRequestHandlerService::fetchResultUsingPost: inside method: " + uri);
       response = restTemplate.postForObject(uri, entity, Map.class);
       if (log.isDebugEnabled()) {
         StringBuilder str = new StringBuilder("Response: ");
