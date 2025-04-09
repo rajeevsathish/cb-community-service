@@ -466,7 +466,7 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
 
                 if (!isCommunityCreationAllowed) {
                     if (esUtilService.doesCommunityNameExistForPublish(
-                        communityDetails.get(Constants.COMMUNITY_NAME).asText(),
+                        dataNode.get(Constants.COMMUNITY_NAME).asText(),
                         dataNode.get(Constants.COMMUNITY_ID).asText())) {
                         response.getParams().setStatus(Constants.FAILED);
                         response.getParams().setErrMsg(
