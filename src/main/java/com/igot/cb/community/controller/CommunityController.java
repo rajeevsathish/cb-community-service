@@ -176,4 +176,10 @@ public class CommunityController {
         ApiResponse response = communityManagementService.searchCommunityFromPrimary(searchCriteria);
         return new ResponseEntity<>(response, response.getResponseCode());
     }
+
+    @GetMapping("/admin/read/{communityId}")
+    public ResponseEntity<ApiResponse> adminReadCommunity(@PathVariable String communityId) {
+        ApiResponse response = communityManagementService.read(communityId);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
 }
