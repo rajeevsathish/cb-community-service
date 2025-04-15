@@ -181,7 +181,8 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
             if (esUtilService.doesCommunityExist(userRootOrgId,
                 communityDetails.get(Constants.COMMUNITY_NAME).asText())) {
                 response.getParams().setStatus(Constants.FAILED);
-                response.getParams().setErrMsg("Community with the given orgId and communityName already exists in this topic. or its in blocked state.");
+                response.getParams()
+                    .setErrMsg("Community name already exists. Do you still want to continue?");
                 response.setResponseCode(HttpStatus.CONFLICT);
                 return response;
             }
@@ -193,7 +194,8 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
             if (!isCommunityCreationAllowed) {
                 if (esUtilService.doesCommunityNameExist(communityDetails.get(Constants.COMMUNITY_NAME).asText())) {
                     response.getParams().setStatus(Constants.FAILED);
-                    response.getParams().setErrMsg("Community with the given communityName already present in another organisation");
+                    response.getParams().setErrMsg(
+                        "A community with this name already exists. Please choose a different name to continue.");
                     response.setResponseCode(HttpStatus.PRECONDITION_FAILED);
                     return response;
                 }
