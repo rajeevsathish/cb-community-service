@@ -182,7 +182,7 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
                 communityDetails.get(Constants.COMMUNITY_NAME).asText())) {
                 response.getParams().setStatus(Constants.FAILED);
                 response.getParams()
-                    .setErrMsg("Community name already exists. Do you still want to continue?");
+                    .setErrMsg(Constants.CREATE_ERROR_MSG_WITHIN_COMMUNITY);
                 response.setResponseCode(HttpStatus.CONFLICT);
                 return response;
             }
@@ -195,7 +195,7 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
                 if (esUtilService.doesCommunityNameExist(communityDetails.get(Constants.COMMUNITY_NAME).asText())) {
                     response.getParams().setStatus(Constants.FAILED);
                     response.getParams().setErrMsg(
-                        "A community with this name already exists. Please choose a different name to continue.");
+                        Constants.CREATE_ERROR_MSG_COMMUNITY);
                     response.setResponseCode(HttpStatus.PRECONDITION_FAILED);
                     return response;
                 }
@@ -456,7 +456,7 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
                 if (esUtilService.isDuplicateCommunity(dataNode.get(Constants.ORG_ID).asText(),
                     dataNode.get(Constants.COMMUNITY_NAME).asText(), dataNode.get(Constants.COMMUNITY_ID).asText())) {
                     response.getParams().setStatus(Constants.FAILED);
-                    response.getParams().setErrMsg("Community with the given orgId and communityName already exists in this topic, or it's in blocked state.");
+                    response.getParams().setErrMsg(Constants.CREATE_ERROR_MSG_WITHIN_COMMUNITY);
                     response.setResponseCode(HttpStatus.CONFLICT);
                     return response;
                 }
@@ -472,7 +472,7 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
                         dataNode.get(Constants.COMMUNITY_ID).asText())) {
                         response.getParams().setStatus(Constants.FAILED);
                         response.getParams().setErrMsg(
-                            "Community with the given communityName already present in another organisation");
+                            Constants.CREATE_ERROR_MSG_COMMUNITY);
                         response.setResponseCode(HttpStatus.PRECONDITION_FAILED);
                         return response;
                     }
@@ -1833,7 +1833,7 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
             if (esUtilService.isDuplicateCommunity(communityDetails.get(Constants.ORG_ID).asText(),
                 communityDetails.get(Constants.COMMUNITY_NAME).asText(), communityDetails.get(Constants.COMMUNITY_ID).asText())) {
                 response.getParams().setStatus(Constants.FAILED);
-                response.getParams().setErrMsg("Community with the given orgId and communityName already exists in this topic, or it's in blocked state.");
+                response.getParams().setErrMsg(Constants.CREATE_ERROR_MSG_WITHIN_COMMUNITY);
                 response.setResponseCode(HttpStatus.CONFLICT);
                 return response;
             }
@@ -1849,7 +1849,7 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
                     communityDetails.get(Constants.COMMUNITY_ID).asText())) {
                     response.getParams().setStatus(Constants.FAILED);
                     response.getParams().setErrMsg(
-                        "Community with the given communityName already present in another organisation");
+                        Constants.CREATE_ERROR_MSG_COMMUNITY);
                     response.setResponseCode(HttpStatus.PRECONDITION_FAILED);
                     return response;
                 }
