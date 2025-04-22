@@ -58,4 +58,6 @@ public interface CommunityManagementService {
     ApiResponse searchCommunityFromPrimary(SearchCriteria searchCriteria);
 
     ApiResponse read(String communityId);
+
+    ApiResponse syncUserWithCommunity(MultipartFile file);
 }

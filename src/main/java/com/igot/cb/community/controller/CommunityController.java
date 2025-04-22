@@ -182,4 +182,10 @@ public class CommunityController {
         ApiResponse response = communityManagementService.read(communityId);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
+
+    @PostMapping(value = "/user/sync", consumes = "multipart/form-data")
+    public ResponseEntity<ApiResponse> searchCommunityFromEs(@RequestParam("file") MultipartFile file) {
+        ApiResponse response = communityManagementService.syncUserWithCommunity(file);
+        return new ResponseEntity<>(response, response.getResponseCode());
+    }
 }

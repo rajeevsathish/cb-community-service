@@ -26,12 +26,17 @@ import com.igot.cb.pores.util.*;
 import com.igot.cb.transactional.cassandrautils.CassandraOperation;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RequestOptions;
@@ -123,6 +128,9 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
 
     @Autowired
     private NotificationService notificationService;
+
+    @Autowired
+    private FileProcessService fileProcessService;
 
     @PostConstruct
     public void init() {
@@ -1932,6 +1940,71 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
             logger.error("Error occured while searching:", e);
             throw new CustomException(Constants.ERROR, "error while processing",
                 HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @Override
+    public ApiResponse syncUserWithCommunity(MultipartFile file) {
+        log.info("CommunityEngagementService:syncUserWithCommunity::inside method");
+        ApiResponse response = ProjectUtil.createDefaultResponse(Constants.API_COMMUNITY_SEARCH);
+        try {
+
+            List<Map<String, String>> processedData = validateFileAndProcessRows(file);
+
+            List<Map<String, Object>> records = objectMapper.convertValue(
+                processedData,
+                new TypeReference<List<Map<String, Object>>>() {
+                }
+            );
+            if (records.isEmpty()) {
+                log.info("No records found in the table: {}.{}");
+            } else {
+                // Process the fetched records
+                for (Map<String, Object> record : records) {
+                    // Add your processing logic here
+                    // Check if the record contains the key 'status' and if its value is true
+                    if (record.containsKey("status") && Constants.TRUE.equalsIgnoreCase(
+                        (String) record.get("status"))) {
+                        String userId = (String) record.get(
+                            Constants.USER_ID_LOWER_CASE); // Fetch userId from the record
+                        String communityId = (String) record.get(
+                            Constants.COMMUNITY_ID_LOWERCASE); // Fetch communityId from the record
+                        esUtilService.updateUserIndex(userId, communityId, true);
+                        // Add your processing logic here
+                    } else {
+                        log.info("Skipping record: {}", record);
+                    }
+                }
+            }
+
+            response.getParams().setStatus(Constants.SUCCESS);
+            response.getParams().setErrMsg("User sync completed successfully.");
+            response.setResponseCode(HttpStatus.OK);
+
+        } catch (Exception e) {
+            logger.error("Error occurred while syncing users with community:", e);
+            throw new CustomException(Constants.ERROR, "error while processing",
+                HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        return response;
+    }
+
+    private List<Map<String, String>> validateFileAndProcessRows(MultipartFile file) {
+        log.info("CommunityServiceImpl::validateFileAndProcessRows");
+        String fileName = file.getOriginalFilename();
+        if (fileName == null) {
+            throw new RuntimeException("File name is null");
+        }
+
+        try (InputStream inputStream = file.getInputStream()) {
+            if (fileName.endsWith(".csv")) {
+                return fileProcessService.processCsvAndSendMessage(inputStream);
+            } else {
+                throw new RuntimeException("Unsupported file type: " + fileName);
+            }
+        } catch (IOException e) {
+            log.error("Error while processing file: {}", e.getMessage());
+            throw new RuntimeException(e.getMessage());
         }
     }
 
