@@ -1,9 +1,11 @@
 package com.igot.cb;
 
 import com.igot.cb.pores.util.PropertiesCache;
-import org.apache.http.client.config.RequestConfig;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
+import org.apache.hc.core5.util.Timeout;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
@@ -39,6 +41,7 @@ public class CbCommunityServiceApplication {
 
       // Get the PropertiesCache instance to fetch the properties
       PropertiesCache propertiesCache = PropertiesCache.getInstance();
+      int timeout = 45000;
 
       // Fetch timeout and connection values from PropertiesCache
       int connectTimeout = Integer.parseInt(propertiesCache.getProperty("rest.client.connect.timeout"));
@@ -49,24 +52,16 @@ public class CbCommunityServiceApplication {
 
       // Configure the RequestConfig with timeouts
       RequestConfig config = RequestConfig.custom()
-          .setConnectTimeout(connectTimeout)
-          .setSocketTimeout(readTimeout)
-          .setConnectionRequestTimeout(connectionRequestTimeout)
+          .setResponseTimeout(Timeout.ofMilliseconds(timeout))
           .build();
-
-      // Configure the CloseableHttpClient with max connections
-      CloseableHttpClient client = HttpClientBuilder.create()
-          .setMaxConnTotal(maxConnections)
-          .setMaxConnPerRoute(maxConnectionsPerRoute)
+      PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
+      cm.setMaxTotal(2000);
+      cm.setDefaultMaxPerRoute(500);
+      CloseableHttpClient client = HttpClients.custom()
           .setDefaultRequestConfig(config)
+          .setConnectionManager(cm)
           .build();
-
-      // Set the read timeout on the request factory
-      HttpComponentsClientHttpRequestFactory cRequestFactory = new HttpComponentsClientHttpRequestFactory(client);
-      cRequestFactory.setReadTimeout(readTimeout);
-      cRequestFactory.setConnectTimeout(connectTimeout);
-
-      return cRequestFactory;
+      return new HttpComponentsClientHttpRequestFactory(client);
     }
 
 }

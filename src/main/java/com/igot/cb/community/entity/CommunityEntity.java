@@ -1,20 +1,22 @@
 package com.igot.cb.community.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.vladmihalcea.hibernate.type.json.JsonBinaryType;
 
+import com.vladmihalcea.hibernate.type.json.JsonType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import java.sql.Timestamp;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Table;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.Type;
-import org.hibernate.annotations.TypeDef;
+
 
 /**
  * @author mahesh.vakkund
@@ -24,13 +26,13 @@ import org.hibernate.annotations.TypeDef;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "communities")
-@TypeDef(name = "jsonb", typeClass = JsonBinaryType.class)
+@JsonIgnoreProperties(ignoreUnknown = true)
 @Entity
 public class CommunityEntity {
     @Id
     private String communityId;
 
-    @Type(type = "jsonb")
+    @Type(JsonType.class)
     @Column(columnDefinition = "jsonb")
     private JsonNode data;
 

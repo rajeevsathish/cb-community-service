@@ -10,20 +10,6 @@ import java.util.Map;
  */
 
 public interface CassandraOperation {
-
-    /**
-     * Retrieves records from Cassandra based on specified properties and key.
-     *
-     * @param keyspaceName The name of the keyspace containing the table.
-     * @param tableName    The name of the table from which to retrieve records.
-     * @param propertyMap  A map representing properties to filter records.
-     * @param fields       A list of fields to include in the retrieved records.
-     * @param key          The key used for retrieving records (e.g., partition key).
-     * @return A list of maps representing the retrieved records.
-     */
-    List<Map<String, Object>> getRecordsByPropertiesByKey(String keyspaceName, String tableName,
-                                                          Map<String, Object> propertyMap, List<String> fields, String key);
-
     /**
      * Inserts a record into Cassandra.
      *

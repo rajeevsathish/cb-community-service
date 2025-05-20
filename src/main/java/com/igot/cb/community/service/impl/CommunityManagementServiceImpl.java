@@ -1,5 +1,17 @@
 package com.igot.cb.community.service.impl;
 
+import co.elastic.clients.elasticsearch._types.aggregations.Aggregation;
+import co.elastic.clients.elasticsearch._types.query_dsl.Query;
+import co.elastic.clients.elasticsearch._types.SortOptions;
+import co.elastic.clients.elasticsearch._types.SortOrder;
+import co.elastic.clients.elasticsearch.core.SearchRequest;
+import co.elastic.clients.elasticsearch.core.SearchResponse;
+import org.elasticsearch.client.RequestOptions;
+import co.elastic.clients.elasticsearch.core.SearchResponse;
+import co.elastic.clients.elasticsearch.core.search.Hit;
+import co.elastic.clients.elasticsearch._types.aggregations.Aggregate;
+import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
+import co.elastic.clients.elasticsearch._types.aggregations.StringTermsAggregate;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -34,24 +46,12 @@ import javax.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.ss.usermodel.WorkbookFactory;
-import org.elasticsearch.action.search.SearchRequest;
-import org.elasticsearch.action.search.SearchResponse;
+
 import org.elasticsearch.client.RequestOptions;
-import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.search.aggregations.AggregationBuilders;
-import org.elasticsearch.search.aggregations.Aggregations;
-import org.elasticsearch.search.SearchHit;
-import org.elasticsearch.search.aggregations.bucket.terms.Terms;
-import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
-import org.elasticsearch.search.builder.SearchSourceBuilder;
-import org.elasticsearch.search.sort.SortBuilders;
-import org.elasticsearch.search.sort.SortOrder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
@@ -96,6 +96,7 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
     CassandraOperation cassandraOperation;
 
     @Autowired
+    @Qualifier(Constants.SEARCH_RESULT_REDIS_TEMPLATE)
     private RedisTemplate<String, SearchResult> redisTemplate;
 
     @Autowired
@@ -119,6 +120,7 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
     private String communityIndex;
 
     @Autowired
+    @Qualifier(Constants.REDIS_OBJECT_TEMPLATE)
     private RedisTemplate<String, Object> objectRedisTemplate;
 
     private BaseStorageService storageService = null;
@@ -1501,54 +1503,74 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
                 Constants.LIMIT) instanceof Number) {
                 limit = ((Number) payload.get(Constants.LIMIT)).intValue();
             }
-            SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-            searchSourceBuilder.from(offset); // Set the offset
-            searchSourceBuilder.size(limit); // Number of documents to retrieve
-            searchSourceBuilder.query(QueryBuilders.boolQuery()
-                .filter(QueryBuilders.termQuery(Constants.STATUS, Constants.ACTIVE)));
+            // Build the query
+            Query query = Query.of(q -> q.bool(b -> b
+                .filter(f -> f.term(t -> t.field(Constants.STATUS).value(Constants.ACTIVE)))
+            ));
 
-            // Sort by 'countOfPeopleJoined' in descending order
-            searchSourceBuilder.sort(SortBuilders.fieldSort((String) payload.get(Constants.FIELD))
-                .order(SortOrder.DESC));
+// Build the sort options
+            SortOptions sortOptions = SortOptions.of(s -> s
+                .field(f -> f
+                    .field((String) payload.get(Constants.FIELD))
+                    .order(SortOrder.Desc)
+                )
+            );
 
-            // Define aggregations (facets)
-            // Example: Aggregation by 'location'
-            TermsAggregationBuilder aggregationBuilder = AggregationBuilders.terms(
-                    payload.get(Constants.FIELD) + "_terms")
-                .field((String) payload.get(Constants.FIELD))
-                .size(10);
-            searchSourceBuilder.aggregation(aggregationBuilder);
+// Build the aggregation
+            Aggregation aggregation = Aggregation.of(a -> a
+                .terms(t -> t
+                    .field((String) payload.get(Constants.FIELD))
+                    .size(10)
+                )
+            );
 
-            // Create the search request
-            SearchRequest searchRequest = new SearchRequest(communityIndex);
-            searchRequest.source(searchSourceBuilder);
+// Build the search request
+            SearchRequest searchRequest = new SearchRequest.Builder()
+                .index(communityIndex)
+                .query(query)
+                .sort(sortOptions)
+                .size(limit)
+                .from(offset)
+                .aggregations(payload.get(Constants.FIELD) + "_terms", aggregation)
+                .build();
 
+// Execute the search request
             // Execute the search request
-            SearchResponse searchResponse = esUtilService.popularCommunities(searchRequest,
+            SearchResponse<Map<String, Object>> searchResponse = esUtilService.popularCommunities(searchRequest,
                 RequestOptions.DEFAULT);
 
-            // Retrieve and set the search hits
-            List<Map<String, Object>> documents = new ArrayList<>();
-            for (SearchHit hit : searchResponse.getHits().getHits()) {
-                documents.add(hit.getSourceAsMap());
-            }
-            response.getResult().put(Constants.DATA,
-                documents);
-            Aggregations aggregations = searchResponse.getAggregations();
-            if (aggregations != null) {
-                Terms terms = aggregations.get(payload.get(Constants.FIELD) + "_terms");
-                List<Map<String, Object>> buckets = new ArrayList<>();
-                for (Terms.Bucket bucket : terms.getBuckets()) {
-                    Map<String, Object> bucketMap = new HashMap<>();
-                    bucketMap.put("key", bucket.getKeyAsString());
-                    bucketMap.put("doc_count", bucket.getDocCount());
-                    buckets.add(bucketMap);
+// Process search hits
+            List<Map<String, Object>> documents = searchResponse.hits().hits().stream()
+                .filter(hit -> hit.source() != null)
+                .map(hit -> hit.source()) // No need to cast if the generic type is correct
+                .collect(Collectors.toList());
+            response.getResult().put(Constants.DATA, documents);
+
+// Process aggregations
+            if (searchResponse.aggregations() != null) {
+                String aggregationField = payload.get(Constants.FIELD) + "_terms";
+                if (searchResponse.aggregations().containsKey(aggregationField)) {
+                    Aggregate aggregate = searchResponse.aggregations().get(aggregationField);
+
+                    if (aggregate != null && aggregate.isSterms()) {
+                        StringTermsAggregate termsAgg = aggregate.sterms();
+                        List<Map<String, Object>> buckets = termsAgg.buckets().array().stream()
+                            .map(bucket -> {
+                                Map<String, Object> bucketMap = new HashMap<>();
+                                bucketMap.put("key", bucket.key()); // already a String
+                                bucketMap.put("doc_count", bucket.docCount());
+                                return bucketMap;
+                            })
+                            .collect(Collectors.toList());
+
+                        response.getResult().put(Constants.FACETS, buckets);
+                    }
+
                 }
-//                response.getResult().setAggregations(buckets);
-                response.getResult().put(Constants.FACETS,
-                    buckets);
             }
+
             return response;
+
         } catch (Exception e) {
             logger.error("Error while executing Elasticsearch query: {}", e.getMessage(), e);
             throw new CustomException("Error while processing", e.getMessage(),

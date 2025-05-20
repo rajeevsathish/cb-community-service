@@ -14,7 +14,7 @@ public class Constants {
     public static final String HEARTBEAT_INTERVAL = "heartbeatIntervalSeconds";
     public static final String POOL_TIMEOUT = "poolTimeoutMillis";
     public static final String CASSANDRA_CONFIG_HOST = "cassandra.config.host";
-    public static final String SUNBIRD_CASSANDRA_CONSISTENCY_LEVEL = "LOCAL_QUORUM";
+    public static final String SUNBIRD_CASSANDRA_CONSISTENCY_LEVEL = "sunbird_cassandra_consistency_level";
     public static final String EXCEPTION_MSG_FETCH = "Exception occurred while fetching record from ";
     public static final String INSERT_INTO = "INSERT INTO ";
     public static final String DOT = ".";
@@ -244,6 +244,11 @@ public class Constants {
     public static String CREATE_ERROR_MSG_WITHIN_COMMUNITY = "A community with this name already exists. Please choose a different name to continue.";
     public static String CREATE_ERROR_MSG_COMMUNITY="Community name already exists. Do you still want to continue?";
     public static final String TRUE = "True";
+    public static final String REDIS_DATA_TEMPLATE = "redisDataTemplate";
+    public static final String SEARCH_RESULT_REDIS_TEMPLATE = "searchResultRedisTemplate";
+    public static final String REDIS_CONNECTION_FACTORY = "redisConnectionFactory";
+    public static final String REDIS_OBJECT_TEMPLATE = "redisObjectTemplate";
+    public static final String REDIS_DATA_CONNECTION_FACTORY = "redisDataConnectionFactory";
 
     private Constants() {
     }
