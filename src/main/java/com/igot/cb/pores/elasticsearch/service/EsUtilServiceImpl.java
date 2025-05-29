@@ -12,15 +12,21 @@ import co.elastic.clients.elasticsearch._types.aggregations.StringTermsBucket;
 import co.elastic.clients.elasticsearch._types.aggregations.TermsAggregation;
 import co.elastic.clients.elasticsearch._types.query_dsl.*;
 import co.elastic.clients.elasticsearch.core.*;
+import org.elasticsearch.action.update.UpdateRequest;
+import org.elasticsearch.action.update.UpdateResponse;
 import co.elastic.clients.elasticsearch.core.SearchRequest.Builder;
 import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.elasticsearch.core.search.HitsMetadata;
 import co.elastic.clients.elasticsearch.core.search.SourceConfig;
-import co.elastic.clients.elasticsearch.indices.GetIndexRequest;
-import co.elastic.clients.elasticsearch.indices.GetIndexResponse;
 import co.elastic.clients.elasticsearch.indices.RefreshRequest;
 import co.elastic.clients.json.JsonData;
+import org.elasticsearch.ElasticsearchStatusException;
+import org.elasticsearch.action.DocWriteResponse;
+import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.rest.RestStatus;
+import org.elasticsearch.script.Script;
+import org.elasticsearch.script.ScriptType;
 
 import com.datastax.oss.driver.api.querybuilder.QueryBuilder;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -39,8 +45,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.MapUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import co.elastic.clients.elasticsearch._types.Script;
-import co.elastic.clients.elasticsearch._types.InlineScript;
+
 
 import org.elasticsearch.client.RequestOptions;
 
@@ -64,7 +69,7 @@ public class EsUtilServiceImpl implements EsUtilService {
     private RestHighLevelClient elasticsearchClient;*/
     private final EsConfig esConfig;
     private final ElasticsearchClient elasticsearchClient;
-    private  final ElasticsearchClient sbESClient;
+    private  final RestHighLevelClient sbESClient;
     private final Logger logger = LogManager.getLogger(getClass());
 
 
@@ -76,7 +81,7 @@ public class EsUtilServiceImpl implements EsUtilService {
 
     @Autowired
     public EsUtilServiceImpl(@Qualifier("elasticsearchClient") ElasticsearchClient elasticsearchClient, EsConfig esConnection,
-        @Qualifier("sbESClient") ElasticsearchClient sbESClient) {
+        @Qualifier("sbESClient") RestHighLevelClient sbESClient) {
         this.elasticsearchClient = elasticsearchClient;
         this.esConfig = esConnection;
       this.sbESClient = sbESClient;
@@ -701,80 +706,79 @@ public class EsUtilServiceImpl implements EsUtilService {
             throw new CustomException("Error while processing", e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
     @Override
     public Boolean updateUserIndex(String userId, String communityId, Boolean append) {
         logger.info("EsUtilService::updateUserIndex:inside method");
         try {
             // Prepare parameters for the script
+            // Prepare parameters for the script
             Map<String, Object> params = new HashMap<>();
             params.put("uuid", communityId);
 
-            // Choose the script source based on the operation type
+            // Choose the script source based on the operation type.
             String scriptSource;
             if (append) {
                 scriptSource = "if (ctx._source.containsKey('discussionCommunities') == false || ctx._source.discussionCommunities == null) {" +
-                    "  ctx._source.discussionCommunities = [];" +
-                    "} " +
-                    "if (!ctx._source.discussionCommunities.contains(params.uuid)) {" +
-                    "  ctx._source.discussionCommunities.add(params.uuid);" +
-                    "}";
+                        "  ctx._source.discussionCommunities = [];" +
+                        "} " +
+                        "if (!ctx._source.discussionCommunities.contains(params.uuid)) {" +
+                        "  ctx._source.discussionCommunities.add(params.uuid);" +
+                        "}";
             } else {
                 scriptSource = "if (ctx._source.containsKey('discussionCommunities') && ctx._source.discussionCommunities != null) {" +
-                    "  ctx._source.discussionCommunities.removeIf(community -> community == params.uuid);" +
-                    "}";
+                        "  ctx._source.discussionCommunities.removeIf(community -> community == params.uuid);" +
+                        "}";
             }
 
-            // Create the script
-            // Convert params to Map<String, JsonData>
-            Map<String, JsonData> jsonDataParams = params.entrySet().stream()
-                .collect(Collectors.toMap(
-                    Map.Entry::getKey,
-                    entry -> JsonData.of(entry.getValue())
-                ));
-
-// Create the script
-            Script script = Script.of(s -> s
-                .inline(i -> i
-                    .source(scriptSource)
-                    .params(jsonDataParams) // Use the converted params
-                )
-            );
-
-            // Prepare the upsert content
+// Prepare the script and upsert content
+            Script script = new Script(ScriptType.INLINE, "painless", scriptSource, params);
             Map<String, Object> upsertContent = new HashMap<>();
             upsertContent.put(Constants.DISCUSSION_COMMUNITY_KEY, Collections.singletonList(communityId));
 
-            // Build the update request
-            UpdateRequest<Object, Object> updateRequest = new UpdateRequest.Builder<Object, Object>()
-                .index(sbUserIndex)
-                .id(userId)
-                .script(script)
-                .upsert(upsertContent)
-                .retryOnConflict(5)
-                .build();
+// Create the UpdateRequest (no type argument)
+            UpdateRequest updateRequest = new UpdateRequest(sbUserIndex, "_doc", userId)
+                    .script(script)
+                    .upsert(upsertContent)
+                    .retryOnConflict(5);
 
-            // Execute the update request
-            UpdateResponse updateResponse = sbESClient.update(updateRequest, Object.class);
+// Log the request for debugging
+            logger.info("UpdateRequest: {}", updateRequest);
 
-            // Handle the response
-            switch (updateResponse.result()) {
-                case Created:
-                    logger.info("WfRequests created successfully for userId: {}", userId);
-                    break;
-                case Updated:
-                    logger.info("WfRequests updated successfully for userId: {}", userId);
-                    break;
-                default:
-                    logger.warn("WfRequests update:: Unexpected result: {}, for userId: {}", updateResponse.result(), userId);
+// Execute the update
+            UpdateResponse updateResponse = sbESClient.update(updateRequest, RequestOptions.DEFAULT);
+
+            DocWriteResponse.Result result = updateResponse.getResult();
+
+            if (result == DocWriteResponse.Result.CREATED) {
+                logger.info("WfRequests created successfully for userId: {}", userId);
+            } else if (result == DocWriteResponse.Result.UPDATED) {
+                logger.info("WfRequests updated successfully for userId: {}", userId);
+            } else if (result == DocWriteResponse.Result.NOOP) {
+                logger.info("WfRequests update was a noop; no changes were made for userId: {}", userId);
+            } else {
+                logger.warn("WfRequests update:: Unexpected result: {}, for userId: {}", result, userId);
             }
 
             return true; // Success
 
+        } catch (ElasticsearchStatusException e) {
+            if (e.status() == RestStatus.CONFLICT) {
+                logger.warn("Conflict detected, retrying attempt {} of {}", e);
+            } else {
+                logger.error("Failed to upsert communityId for userId: {}", userId, e);
+                return false;
+            }
         } catch (Exception e) {
             logger.error("Failed to upsert communityId for userId: {}", userId, e);
             return false;
         }
+
+
+        logger.error("Failed to upsert communityId for userId: {} after {} retries", userId);
+        return false;
     }
+
 
     @Override
     public Boolean doesCommunityExist(String orgId, String communityName) {
