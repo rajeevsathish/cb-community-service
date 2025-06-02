@@ -40,6 +40,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
@@ -547,7 +548,7 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
                 parameterisedMap.put(Constants.USER_ID, userId);
                 parameterisedMap.put(Constants.STATUS, true);
                 parameterisedMap.put(Constants.LAST_UPDATED_AT,
-                    new Timestamp(Calendar.getInstance().getTime().getTime()));
+                        Instant.now());
                 cassandraOperation.insertRecord(Constants.KEYSPACE_SUNBIRD,
                     Constants.USER_COMMUNITY_TABLE, parameterisedMap);
                 Map<String, Object> dataMap = new HashMap<>();
@@ -567,7 +568,7 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
                     Map<String, Object> updateUserCommunityLookUp = new HashMap<>();
                     updateUserCommunityDetails.put(Constants.STATUS, true);
                     updateUserCommunityDetails.put(Constants.LAST_UPDATED_AT,
-                        new Timestamp(Calendar.getInstance().getTime().getTime()));
+                        Instant.now());
                     updateUserCommunityLookUp.put(Constants.STATUS, true);
                     cassandraOperation.updateRecord(
                         Constants.KEYSPACE_SUNBIRD, Constants.USER_COMMUNITY_TABLE,
@@ -935,7 +936,7 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
                 Map<String, Object> updateUserCommunityLookUp = new HashMap<>();
                 updateUserCommunityDetails.put(Constants.STATUS, false);
                 updateUserCommunityDetails.put(Constants.LAST_UPDATED_AT,
-                    new Timestamp(Calendar.getInstance().getTime().getTime()));
+                    Instant.now());
                 updateUserCommunityLookUp.put(Constants.STATUS, false);
                 cassandraOperation.updateRecord(
                     Constants.KEYSPACE_SUNBIRD, Constants.USER_COMMUNITY_TABLE,
