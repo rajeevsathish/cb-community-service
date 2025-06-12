@@ -79,7 +79,7 @@ public class CacheService {
       // Add each field to the hash only if it does not exist
       HashOperations<String, String, String> hashOps = redisTemplate.opsForHash();
       for (Map.Entry<String, String> entry : userMap.entrySet()) {
-        Boolean isAbsent = hashOps.putIfAbsent(Constants.REDIS_KEY_PREFIX + key, entry.getKey(), entry.getValue());
+        Boolean isAbsent = hashOps.putIfAbsent(key, entry.getKey(), entry.getValue());
         // Optional: track how many were actually added
       }
     } catch (Exception e) {
@@ -92,7 +92,7 @@ public class CacheService {
   public List<String> getPaginatedUsersFromHash(String key, int offset, int limit) {
     try {
       HashOperations<String, String, String> hashOps = redisTemplate.opsForHash();
-      Map<String, String> allUsers = hashOps.entries(Constants.REDIS_KEY_PREFIX + key);
+      Map<String, String> allUsers = hashOps.entries(key);
       List<String> userIdList = new ArrayList<>(allUsers.keySet());
 
       // Sort users if needed
@@ -118,7 +118,7 @@ public class CacheService {
   public Long getListSize(String key) {
     try {
       HashOperations<String, String, String> hashOps = redisTemplate.opsForHash();
-      return hashOps.size(Constants.REDIS_KEY_PREFIX + key);
+      return hashOps.size(key);
     } catch (Exception e) {
       log.error("Error while fetching hash size from Redis: {}", e.getMessage(), e);
       return null;
@@ -128,7 +128,7 @@ public class CacheService {
   public void deleteUserFromHash(String key, String field) {
     try {
       HashOperations<String, String, String> hashOps = redisTemplate.opsForHash();
-      Long fieldsRemoved = hashOps.delete(Constants.REDIS_KEY_PREFIX + key, field);
+      Long fieldsRemoved = hashOps.delete(key, field);
 
       if (fieldsRemoved != null && fieldsRemoved > 0) {
         log.info("Field '{}' removed from hash '{}'", field, key);
