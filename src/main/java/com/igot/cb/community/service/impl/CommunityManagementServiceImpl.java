@@ -885,8 +885,7 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
                     // Convert the stringified JSON to a User object using ObjectMapper
                     return objectMapper.readValue(stringifiedJson, Object.class); // You can map this to a specific User type if needed
                 } catch (Exception e) {
-                    // Handle any exceptions during deserialization
-                    e.printStackTrace();
+                    log.error("Failed to convert String to Json: String value: " + stringifiedJson, e);
                     return null; // Return null in case of error
                 }
             })
