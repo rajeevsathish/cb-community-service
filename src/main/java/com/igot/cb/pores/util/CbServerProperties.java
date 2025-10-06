@@ -62,4 +62,7 @@ public class CbServerProperties {
     @Value("${fixed.community.url}")
     private String fixedCommunityUrl;
 
+    @Value("${search.query.fields}")
+    private String searchQueryFields;
+
 }

@@ -1958,6 +1958,11 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
                 return response;
             }
             return searchCommunityFromEs(searchCriteria, response, communityIndex);
+        } catch (RuntimeException e) {
+            log.error("Validation error in search:", e);
+            createErrorResponse(response, e.getMessage(),
+                    HttpStatus.BAD_REQUEST, Constants.FAILED_CONST);
+            return response;
         } catch (Exception e) {
             logger.error("Error occured while searching:", e);
             throw new CustomException(Constants.ERROR, "error while processing",
@@ -2079,7 +2084,7 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
             return response;
         } catch (Exception e) {
             logger.error("Exception occured while fetching and caching in search API:", e);
-            throw new CustomException(Constants.ERROR, "error while processing",
+            throw new CustomException(Constants.ERROR, "error while processing ",
                 HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
