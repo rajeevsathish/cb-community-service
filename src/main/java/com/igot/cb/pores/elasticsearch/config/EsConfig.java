@@ -36,17 +36,11 @@ public class EsConfig  {
     @Value("${elasticsearch.password}")
     private String elasticsearchPassword;
 
-    @Value("${elasticsearch.sbESClient.host}")
-    private String sbESClientHost;
+    @Value("${user_es_host}")
+    private String userESClientHost;
 
-    @Value("${elasticsearch.sbESClient.port}")
-    private String sbESClientPort;
-
-    @Value("${elasticsearch.sbESClient.username}")
-    private String sbESClientUsername;
-
-    @Value("${elasticsearch.sbESClient.password}")
-    private String sbESClientPassword;
+    @Value("${user_es_port}")
+    private String userESClientPort;
 
 //    @Override
     @Bean(name = "elasticsearchClient")
@@ -54,12 +48,12 @@ public class EsConfig  {
         return createClient(elasticsearchHost, elasticsearchPort, elasticsearchUsername, elasticsearchPassword);
     }
 
-    @Bean(name = "sbESClient")
-    public RestHighLevelClient sbESClient() {
+    @Bean(name = "userESClient")
+    public RestHighLevelClient userESClient() {
         List<String> hosts = new ArrayList<>();
         List<Integer> ports = new ArrayList<>();
-        String[] splitedHost = sbESClientHost.split(",");
-        String[] splitedPort = sbESClientPort.split(",");
+        String[] splitedHost = userESClientHost.split(",");
+        String[] splitedPort = userESClientPort.split(",");
 
         for (String val : splitedHost) {
             hosts.add(val);

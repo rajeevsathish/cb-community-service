@@ -65,7 +65,7 @@ public class EsUtilServiceImpl implements EsUtilService {
     private RestHighLevelClient elasticsearchClient;*/
     private final EsConfig esConfig;
     private final ElasticsearchClient elasticsearchClient;
-    private  final RestHighLevelClient sbESClient;
+    private  final RestHighLevelClient userESClient;
     private final Logger logger = LogManager.getLogger(getClass());
     private final Map<String, Map<String, Object>> schemaCache = new ConcurrentHashMap<>();
 
@@ -78,14 +78,14 @@ public class EsUtilServiceImpl implements EsUtilService {
 
     @Autowired
     public EsUtilServiceImpl(@Qualifier("elasticsearchClient") ElasticsearchClient elasticsearchClient, EsConfig esConnection,
-        @Qualifier("sbESClient") RestHighLevelClient sbESClient) {
+        @Qualifier("userESClient") RestHighLevelClient userESClient) {
         this.elasticsearchClient = elasticsearchClient;
         this.esConfig = esConnection;
-      this.sbESClient = sbESClient;
+        this.userESClient = userESClient;
     }
 
-    @Value("${sunbird_user_index}")
-    private String sbUserIndex;
+    @Value("${user_index_name}")
+    private String userIndex;
 
     @Value("${community.index}")
     private String communityIndex;
@@ -715,7 +715,7 @@ public class EsUtilServiceImpl implements EsUtilService {
             upsertContent.put(Constants.DISCUSSION_COMMUNITY_KEY, Collections.singletonList(communityId));
 
 // Create the UpdateRequest (no type argument)
-            UpdateRequest updateRequest = new UpdateRequest(sbUserIndex, "_doc", userId)
+            UpdateRequest updateRequest = new UpdateRequest(userIndex, "_doc", userId)
                     .script(script)
                     .upsert(upsertContent)
                     .retryOnConflict(5);
@@ -724,7 +724,7 @@ public class EsUtilServiceImpl implements EsUtilService {
             logger.info("UpdateRequest: {}", updateRequest);
 
 // Execute the update
-            UpdateResponse updateResponse = sbESClient.update(updateRequest, RequestOptions.DEFAULT);
+            UpdateResponse updateResponse = userESClient.update(updateRequest, RequestOptions.DEFAULT);
 
             DocWriteResponse.Result result = updateResponse.getResult();
 
