@@ -88,9 +88,11 @@ public class CassandraConnectionManagerImpl implements CassandraConnectionManage
             List<String> contactPointsString = hosts.stream()
                     .map(host -> host.trim() + ":9042") // Ensure proper host:port format
                     .collect(Collectors.toList());
+            ConsistencyLevel consistencyLevel = getConsistencyLevel();
+            String consistencyLevelName = consistencyLevel != null ? consistencyLevel.name() : ConsistencyLevel.LOCAL_ONE.name();
             DriverConfigLoader loader = DriverConfigLoader.programmaticBuilder()
                     .withStringList(DefaultDriverOption.CONTACT_POINTS, contactPointsString)
-                    .withString(DefaultDriverOption.REQUEST_CONSISTENCY, getConsistencyLevel().name())
+                    .withString(DefaultDriverOption.REQUEST_CONSISTENCY, consistencyLevelName)
                     .withString(DefaultDriverOption.LOAD_BALANCING_LOCAL_DATACENTER, "datacenter1")
                     .withInt(DefaultDriverOption.CONNECTION_POOL_LOCAL_SIZE,
                             Integer.parseInt(cache.getProperty(Constants.CORE_CONNECTIONS_PER_HOST_FOR_LOCAL)))

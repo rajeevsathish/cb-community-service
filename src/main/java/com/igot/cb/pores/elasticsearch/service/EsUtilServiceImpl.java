@@ -178,8 +178,10 @@ public class EsUtilServiceImpl implements EsUtilService {
             throw new RuntimeException("The length of the search string exceeds the allowed maximum of " + cbServerProperties.getSearchStringMaxRegexLength() + " characters.");
         }
         SearchRequest.Builder searchRequestBuilder = buildSearchRequest(searchCriteria);
+        if (searchRequestBuilder == null) {
+            throw new IllegalStateException("Failed to build SearchRequest: builder is null");
+        }
         searchRequestBuilder.index(esIndexName);
-        assert searchRequestBuilder != null;
         try {
             SearchResult searchResult = new SearchResult();
 

@@ -529,8 +529,7 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
             String communityId = (String) request.get(Constants.COMMUNITY_ID);
             Optional<CommunityEntity> optCommunity = communityEngagementRepository.findByCommunityIdAndIsActive(
                 communityId, true);
-            if (optCommunity == null || !optCommunity.isPresent() || optCommunity.get().getData()
-                .isEmpty()) {
+            if (optCommunity.isEmpty() || optCommunity.get().getData().isEmpty()) {
                 response.setResponseCode(HttpStatus.BAD_REQUEST);
                 response.getParams().setErr(Constants.INVALID_COMMUNITY_ID);
                 return response;
@@ -769,17 +768,16 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
                 }
             }
             List<String> userListWithPrefix = new ArrayList<>(uniqueUserIds);
-            List<Object> userList = fetchDataForKeys(userListWithPrefix);
-            if (userList != null) {
-                userList.replaceAll(obj -> {
-                    if (obj instanceof Map) {
-                        Map<String, Object> map = (Map<String, Object>) obj;
-                        map.computeIfPresent(Constants.DESIGNATION, (k, v) ->
-                            Constants.NULL_STRING.equalsIgnoreCase(String.valueOf(v)) ? "" : v);
-                    }
-                    return obj;
-                });
-            }
+            List<Object> userList = new ArrayList<>(Optional.ofNullable(fetchDataForKeys(userListWithPrefix))
+                    .orElse(Collections.emptyList()));
+            userList.replaceAll(obj -> {
+                if (obj instanceof Map) {
+                    Map<String, Object> map = (Map<String, Object>) obj;
+                    map.computeIfPresent(Constants.DESIGNATION, (k, v) ->
+                        Constants.NULL_STRING.equalsIgnoreCase(String.valueOf(v)) ? "" : v);
+                }
+                return obj;
+            });
             Map<String, Object> userInfoList = userList.stream()
                 .map(user -> (Map<String, Object>) user)
                 .collect(Collectors.toMap(
@@ -885,6 +883,8 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
                     // Convert the stringified JSON to a User object using ObjectMapper
                     return objectMapper.readValue(stringifiedJson, Object.class); // You can map this to a specific User type if needed
                 } catch (Exception e) {
+                    // Handle any exceptions during deserialization
+                    log.error("Deserialization error: {}", e.getMessage(), e);
                     log.error("Failed to convert String to Json: String value: " + stringifiedJson, e);
                     return null; // Return null in case of error
                 }
@@ -910,7 +910,7 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
             String communityId = (String) request.get(Constants.COMMUNITY_ID);
             Optional<CommunityEntity> optCommunity = communityEngagementRepository.findByCommunityIdAndIsActive(
                 communityId, true);
-            if (optCommunity == null || !optCommunity.isPresent() || optCommunity.get().getData()
+            if (optCommunity.isEmpty() || optCommunity.get().getData()
                 .isEmpty()) {
                 response.setResponseCode(HttpStatus.BAD_REQUEST);
                 response.getParams().setErr(Constants.INVALID_COMMUNITY_ID);
@@ -1719,7 +1719,12 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
         try {
             file = new File(System.currentTimeMillis() + "_" + mFile.getOriginalFilename());
 
-            file.createNewFile();
+            boolean isFileCreated = file.createNewFile();
+            if (!isFileCreated) {
+                // Handle case where file already exists (log, throw exception, etc.)
+                logger.info("Failed to create new file: {}", file.getAbsolutePath());
+                throw new IOException();
+            }
             // Use try-with-resources to ensure FileOutputStream is closed
             try (FileOutputStream fos = new FileOutputStream(file)) {
                 fos.write(mFile.getBytes());
@@ -1737,7 +1742,11 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
             return response;
         } finally {
             if (file != null && file.exists()) {
-                file.delete();
+                boolean isDeleted = file.delete();
+                if (!isDeleted) {
+                    // Handle failure to delete the file (log it, alert, etc.)
+                    logger.warn("Failed to delete temporary file: {}", file.getAbsolutePath());
+                }
             }
         }
     }
@@ -1746,28 +1755,35 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
     public ApiResponse searchTopic(SearchCriteria searchCriteria) {
         log.info("CommunityEngagementService:searchTopic::inside method");
         ApiResponse response = ProjectUtil.createDefaultResponse(Constants.API_COMMUNITY_SEARCH);
+
+        if (searchCriteria == null) {
+            createErrorResponse(response, "Search criteria cannot be null",
+                    HttpStatus.BAD_REQUEST, Constants.FAILED_CONST);
+            return response;
+        }
+
         try {
-            SearchResult searchResult = new SearchResult();
-            searchResult = redisTemplate.opsForValue()
-                .get(generateRedisJwtTokenKey(searchCriteria));
+            SearchResult searchResult = redisTemplate.opsForValue()
+                    .get(generateRedisJwtTokenKey(searchCriteria));
             if (searchResult != null) {
-                log.info(
-                    "DiscussionServiceImpl::searchDiscussion:  search result fetched from redis");
+                log.info("DiscussionServiceImpl::searchDiscussion: search result fetched from redis");
                 response.getResult().put(Constants.SEARCH_RESULTS, searchResult);
                 createSuccessResponse(response);
                 return response;
             }
+
             String searchString = searchCriteria.getSearchString();
             if (searchString != null && searchString.length() < 2) {
                 createErrorResponse(response, Constants.MINIMUM_CHARACTERS_NEEDED,
-                    HttpStatus.BAD_REQUEST, Constants.FAILED_CONST);
+                        HttpStatus.BAD_REQUEST, Constants.FAILED_CONST);
                 return response;
             }
+
             return handleSearchAndCache(searchCriteria, response, communityCategoryIndex);
         } catch (Exception e) {
-            logger.error("Error occured while searching:", e);
+            logger.error("Error occurred while searching:", e);
             throw new CustomException(Constants.ERROR, "error while processing",
-                HttpStatus.INTERNAL_SERVER_ERROR);
+                    HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -2056,8 +2072,7 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
                         }
                     }
                 }
-                List<String> userIdList = new ArrayList<>(
-                    uniqueOrgIds != null ? uniqueOrgIds : Collections.emptySet());
+                List<String> userIdList = new ArrayList<>(uniqueOrgIds);
 // Convert Set to List
                 List<Object> userList = fetchDataForKeys(userIdList);
                 if (userList != null) {
