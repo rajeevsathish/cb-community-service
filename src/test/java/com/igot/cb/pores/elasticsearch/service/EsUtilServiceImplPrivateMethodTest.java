@@ -11,18 +11,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.igot.cb.pores.elasticsearch.config.EsConfig;
 import com.igot.cb.pores.elasticsearch.dto.SearchCriteria;
 import com.igot.cb.pores.util.CbServerProperties;
+import org.elasticsearch.client.RestHighLevelClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.function.Executable;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
-import java.util.stream.Collectors;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -32,7 +34,7 @@ class EsUtilServiceImplPrivateMethodTest {
 
     @Mock
     private ElasticsearchClient elasticsearchClient;
-    @Mock private ElasticsearchClient sbESClient;
+    @Mock private RestHighLevelClient sbESClient;
     @Mock private EsConfig esConfig;
     @Mock private ObjectMapper objectMapper;
     @Mock private CbServerProperties cbServerProperties;
@@ -45,7 +47,7 @@ class EsUtilServiceImplPrivateMethodTest {
 
         ElasticsearchClient mockClient = mock(ElasticsearchClient.class);
         EsConfig mockConfig = mock(EsConfig.class);
-        ElasticsearchClient sbMockClient = mock(ElasticsearchClient.class);
+        RestHighLevelClient sbMockClient = mock(RestHighLevelClient.class);
         esUtilService = new EsUtilServiceImpl(mockClient, mockConfig, sbMockClient);
 
         Field objectMapperField = EsUtilServiceImpl.class.getDeclaredField("objectMapper");
@@ -56,9 +58,9 @@ class EsUtilServiceImplPrivateMethodTest {
         cbPropsField.setAccessible(true);
         cbPropsField.set(esUtilService, cbServerProperties);
 
-        Field sbUserIndexField = EsUtilServiceImpl.class.getDeclaredField("sbUserIndex");
-        sbUserIndexField.setAccessible(true);
-        sbUserIndexField.set(esUtilService, "user-index");
+        Field userIndexField = EsUtilServiceImpl.class.getDeclaredField("userIndex");
+        userIndexField.setAccessible(true);
+        userIndexField.set(esUtilService, "user-index");
 
         Field communityIndexField = EsUtilServiceImpl.class.getDeclaredField("communityIndex");
         communityIndexField.setAccessible(true);
@@ -165,10 +167,15 @@ class EsUtilServiceImplPrivateMethodTest {
         SearchCriteria criteria = new SearchCriteria();
         criteria.setOrderBy("countOfPeopleJoined");
         criteria.setOrderDirection("ASC");
-
+        when(cbServerProperties.getElasticCommunityJsonPath()).thenReturn("dummy-schema.json");
+        Field schemaCacheField = EsUtilServiceImpl.class.getDeclaredField("schemaCache");
+        schemaCacheField.setAccessible(true);
+        Map<String, Map<String, Object>> schemaCache = new ConcurrentHashMap<>();
+        schemaCache.put("dummy-schema.json", Map.of("countOfPeopleJoined", Map.of("type", "number")));
+        schemaCacheField.set(esUtilService, schemaCache);
         SearchRequest.Builder builder = new SearchRequest.Builder();
         invokeAddSortToSearchSourceBuilder(criteria, builder);
-
+        assertNotNull(builder);
     }
 
     @Test
@@ -176,10 +183,32 @@ class EsUtilServiceImplPrivateMethodTest {
         SearchCriteria criteria = new SearchCriteria();
         criteria.setOrderBy("name");
         criteria.setOrderDirection("DESC");
-
         SearchRequest.Builder builder = new SearchRequest.Builder();
-        invokeAddSortToSearchSourceBuilder(criteria, builder);
-
+        ElasticsearchClient mockClient = Mockito.mock(ElasticsearchClient.class);
+        EsConfig mockConfig = Mockito.mock(EsConfig.class);
+        RestHighLevelClient mockRestClient = Mockito.mock(RestHighLevelClient.class);
+        CbServerProperties mockProps = Mockito.mock(CbServerProperties.class);
+        ObjectMapper mockMapper = Mockito.mock(ObjectMapper.class);
+        Mockito.when(mockProps.getElasticCommunityJsonPath()).thenReturn("/dummy/path");
+        EsUtilServiceImpl realService = new EsUtilServiceImpl(mockClient, mockConfig, mockRestClient);
+        Field propsField = EsUtilServiceImpl.class.getDeclaredField("cbServerProperties");
+        propsField.setAccessible(true);
+        propsField.set(realService, mockProps);
+        Field mapperField = EsUtilServiceImpl.class.getDeclaredField("objectMapper");
+        mapperField.setAccessible(true);
+        mapperField.set(realService, mockMapper);
+        EsUtilServiceImpl spyService = Mockito.spy(realService);
+        Map<String, Object> fakeSchema = new HashMap<>();
+        fakeSchema.put("name", Map.of("type", "text"));
+        Mockito.doReturn(fakeSchema).when(spyService).readJsonSchema(Mockito.anyString());
+        Method privateMethod = EsUtilServiceImpl.class.getDeclaredMethod(
+                "addSortToSearchSourceBuilder",
+                SearchCriteria.class,
+                SearchRequest.Builder.class
+        );
+        privateMethod.setAccessible(true);
+        privateMethod.invoke(spyService, criteria, builder);
+        assertNotNull(builder);
     }
 
     @Test
@@ -208,23 +237,18 @@ class EsUtilServiceImplPrivateMethodTest {
     @Test
     void testAddQueryStringToFilter_withValidSearchString_addsBoolQuery() throws Exception {
         String searchString = "TestCommunity";
-
-        // Create a BoolQuery.Builder
+        when(cbServerProperties.getSearchQueryFields())
+                .thenReturn("communityName.keyword,orgName.keyword");
         BoolQuery.Builder builder = new BoolQuery.Builder();
-
-        // Use reflection to invoke private method
-        Method method = EsUtilServiceImpl.class.getDeclaredMethod("addQueryStringToFilter", String.class, BoolQuery.Builder.class);
+        Method method = EsUtilServiceImpl.class.getDeclaredMethod(
+                "addQueryStringToFilter", String.class, BoolQuery.Builder.class);
         method.setAccessible(true);
         method.invoke(esUtilService, searchString, builder);
-
-        // Build final BoolQuery and verify content
         BoolQuery boolQuery = builder.build();
         assertFalse(boolQuery.must().isEmpty(), "Must clause should not be empty");
-
-        BoolQuery innerBool = boolQuery.must().get(0).bool();
-        assertEquals(2, innerBool.should().size(), "Inner BoolQuery should contain 2 should clauses");
-
-        List<String> fields = innerBool.should().stream().map(q -> q.wildcard().field()).collect(Collectors.toList());
+        Query query = boolQuery.must().get(0);
+        assertTrue(query.isMultiMatch(), "Expected a MultiMatch query");
+        List<String> fields = query.multiMatch().fields();
         assertTrue(fields.contains("communityName.keyword"));
         assertTrue(fields.contains("orgName.keyword"));
     }

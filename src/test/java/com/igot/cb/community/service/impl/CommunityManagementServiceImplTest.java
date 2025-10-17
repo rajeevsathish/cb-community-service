@@ -2263,12 +2263,14 @@ class CommunityManagementServiceImplTest {
     void testSearchCommunityFromPrimary_exceptionThrown() throws Exception {
         SearchCriteria criteria = new SearchCriteria();
         criteria.setSearchString("valid");
-
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get(anyString())).thenReturn(null);
         when(esUtilService.searchDocuments(any(), any())).thenThrow(new RuntimeException("Search failed"));
-
-        CustomException ex = assertThrows(CustomException.class, () -> service.searchCommunityFromPrimary(criteria));
-
-        assertEquals("error while processing", ex.getMessage());
+        ApiResponse response = service.searchCommunityFromPrimary(criteria);
+        assertNotNull(response);
+        assertEquals(HttpStatus.BAD_REQUEST, response.getResponseCode());
+        assertEquals(Constants.FAILED_CONST, response.getParams().getStatus());
+        assertTrue(response.getParams().getErrMsg().trim().contains("error while processing"));
     }
 
     @Test
