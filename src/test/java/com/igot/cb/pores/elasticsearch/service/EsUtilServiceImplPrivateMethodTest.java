@@ -139,28 +139,29 @@ class EsUtilServiceImplPrivateMethodTest {
     @Test
     void testAddSortToSearchSourceBuilder_withNullCriteria() throws Exception {
         SearchRequest.Builder builder = new SearchRequest.Builder();
-        invokeAddSortToSearchSourceBuilder(null, builder);
+        assertDoesNotThrow(() -> invokeAddSortToSearchSourceBuilder(null, builder));
     }
+
 
     @Test
     void testAddSortToSearchSourceBuilder_withBlankOrderBy() throws Exception {
         SearchCriteria criteria = new SearchCriteria();
         criteria.setOrderBy(" ");
         criteria.setOrderDirection("asc");
-
         SearchRequest.Builder builder = new SearchRequest.Builder();
-        invokeAddSortToSearchSourceBuilder(criteria, builder);
+        assertDoesNotThrow(() -> invokeAddSortToSearchSourceBuilder(criteria, builder));
     }
+
 
     @Test
     void testAddSortToSearchSourceBuilder_withBlankOrderDirection() throws Exception {
         SearchCriteria criteria = new SearchCriteria();
         criteria.setOrderBy("someField");
         criteria.setOrderDirection(" ");
-
         SearchRequest.Builder builder = new SearchRequest.Builder();
-        invokeAddSortToSearchSourceBuilder(criteria, builder);
+        assertDoesNotThrow(() -> invokeAddSortToSearchSourceBuilder(criteria, builder));
     }
+
 
     @Test
     void testAddSortToSearchSourceBuilder_withNumericSortField() throws Exception {
@@ -323,14 +324,11 @@ class EsUtilServiceImplPrivateMethodTest {
 
     @Test
     void testUpdateUserIndex_appendFalse_success() throws Exception {
-        // Invoke private method using reflection
         Method method = EsUtilServiceImpl.class.getDeclaredMethod("updateUserIndex", String.class, String.class, Boolean.class);
         method.setAccessible(true);
+        assertDoesNotThrow(() -> method.invoke(esUtilService, "user123", "communityABC", true));
+    }
 
-        // Act
-       method.invoke(esUtilService, "user123", "communityABC", true);
-
-}
 
     @Test
     void testUpdateUserIndex_appendFalse_Failed() throws Exception {

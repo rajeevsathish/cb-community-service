@@ -57,8 +57,9 @@ class CassandraConnectionManagerImplTest {
     @Test
     void testShutdownHook() {
         Thread thread = new CassandraConnectionManagerImpl.ResourceCleanUp();
-        thread.start();
+        assertDoesNotThrow(thread::start);
     }
+
 
     private ConsistencyLevel invokeGetConsistencyLevel() {
         try {
@@ -85,12 +86,12 @@ class CassandraConnectionManagerImplTest {
             assertEquals("Cassandra host is not configured", exception.getMessage()); // Adjust message if needed
         }
     }
-    
+
     @Test
     void testResourceCleanup() {
-        // This is just for code coverage
         CassandraConnectionManagerImpl.ResourceCleanUp cleanup = new CassandraConnectionManagerImpl.ResourceCleanUp();
-        cleanup.run();
+        assertDoesNotThrow(cleanup::run);
     }
+
 
 }

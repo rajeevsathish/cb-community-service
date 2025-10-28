@@ -397,6 +397,9 @@ public class EsUtilServiceImpl implements EsUtilService {
                                         case Constants.SEARCH_OPERATION_LESS_THAN:
                                             rangeQuery.lt(JsonData.of(rangeValue));
                                             break;
+                                        default:
+                                            logger.warn("Unsupported range operator: {}", rangeOperator);
+                                            break;
                                     }
                                 });
                                 rangeOrNullQuery.should(rangeQuery.build()._toQuery());
@@ -481,7 +484,7 @@ public class EsUtilServiceImpl implements EsUtilService {
                 .collect(Collectors.toMap(
                     field -> field + "_agg",
                     field -> Aggregation.of(a -> a.terms(
-                        TermsAggregation.of(t -> t.field(field + ".keyword").size(250))))
+                        TermsAggregation.of(t -> t.field(field + Constants.KEYWORD).size(250))))
                 ));
             searchRequestBuilder.aggregations(aggregationMap);
         }
@@ -784,7 +787,7 @@ public class EsUtilServiceImpl implements EsUtilService {
             // Check if any documents match the query
             return searchResponse.hits().total().value() > 0;
         } catch (Exception e) {
-            log.error("Error checking community existence in Elasticsearch: {}", e);
+            log.error(Constants.ERR_WHILE_CHECKING_COMMUNITY_EXISTENCE, e);
             return false;
         }
     }
@@ -796,8 +799,8 @@ public class EsUtilServiceImpl implements EsUtilService {
         try {
             // Build the query
             Query query = Query.of(q -> q.bool(b -> b
-                .must(m -> m.term(t -> t.field(Constants.ORG_ID + ".keyword").value(orgId)))
-                .must(m -> m.term(t -> t.field(Constants.COMMUNITY_NAME + ".keyword").value(communityName)))
+                .must(m -> m.term(t -> t.field(Constants.ORG_ID + Constants.KEYWORD).value(orgId)))
+                .must(m -> m.term(t -> t.field(Constants.COMMUNITY_NAME + Constants.KEYWORD).value(communityName)))
                 .mustNot(m -> {
                     if (excludeCommunityId != null && !excludeCommunityId.isEmpty()) {
                         return m.term(t -> t.field("_id").value(excludeCommunityId));
@@ -821,7 +824,7 @@ public class EsUtilServiceImpl implements EsUtilService {
             return searchResponse.hits().total().value() > 0;
 
         } catch (Exception e) {
-            logger.error("Error checking community existence in Elasticsearch: {}", e);
+            logger.error(Constants.ERR_WHILE_CHECKING_COMMUNITY_EXISTENCE, e);
             return false;
         }
     }
@@ -848,7 +851,7 @@ public class EsUtilServiceImpl implements EsUtilService {
             // Check if any documents match the query
             return searchResponse.hits().total().value() > 0;
         } catch (Exception e) {
-            logger.error("Error checking community existence in Elasticsearch: {}", e);
+            logger.error(Constants.ERR_WHILE_CHECKING_COMMUNITY_EXISTENCE, e);
             return false;
         }
     }
@@ -882,7 +885,7 @@ public class EsUtilServiceImpl implements EsUtilService {
             // Check if any documents match the query
             return searchResponse.hits().total().value() > 0;
         } catch (Exception e) {
-            logger.error("Error checking community existence in Elasticsearch: {}", e);
+            logger.error(Constants.ERR_WHILE_CHECKING_COMMUNITY_EXISTENCE, e);
             return false;
         }
     }

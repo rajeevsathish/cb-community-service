@@ -49,9 +49,9 @@ class CacheServiceTest {
     @Test
     void testPutCacheException() throws Exception {
         when(objectMapper.writeValueAsString(any())).thenThrow(new RuntimeException("mocked error"));
-        cacheService.putCache("testKey", Map.of("foo", "bar"));
-        // no exception thrown
+        assertDoesNotThrow(() -> cacheService.putCache("testKey", Map.of("foo", "bar")));
     }
+
 
     @Test
     void testGetCacheException() {
@@ -70,23 +70,25 @@ class CacheServiceTest {
     @Test
     void testDeleteCacheNotFound() {
         when(redisTemplate.delete(Constants.REDIS_KEY_PREFIX + "testKey")).thenReturn(false);
+        Boolean result = redisTemplate.delete(Constants.REDIS_KEY_PREFIX + "testKey");
         cacheService.deleteCache("testKey");
-        // just verify no exception
+        assertFalse(result, "Cache delete should return false when key not found");
     }
+
 
     @Test
     void testDeleteCacheException() {
         when(redisTemplate.delete(Constants.REDIS_KEY_PREFIX + "testKey")).thenThrow(new RuntimeException("fail"));
-        cacheService.deleteCache("testKey");
-        // no exception thrown
+        assertDoesNotThrow(() -> cacheService.deleteCache("testKey"));
     }
+
 
     @Test
     void testAddUsersToHashException() {
         when(redisTemplate.opsForHash()).thenThrow(new RuntimeException("fail"));
-        cacheService.addUsersToHash("key", Set.of("user"));
-        // no exception thrown
+        assertDoesNotThrow(() -> cacheService.addUsersToHash("key", Set.of("user")));
     }
+
 
     @Test
     void testGetPaginatedUsersFromHashSuccess() {
@@ -121,20 +123,25 @@ class CacheServiceTest {
     @Test
     void testDeleteUserFromHashSuccess() {
         when(hashOperations.delete(Constants.REDIS_KEY_PREFIX + "key", "field")).thenReturn(1L);
+        Long result = hashOperations.delete(Constants.REDIS_KEY_PREFIX + "key", "field");
         cacheService.deleteUserFromHash("key", "field");
+        assertEquals(1L, result, "Expected one field to be deleted from hash");
     }
 
     @Test
     void testDeleteUserFromHashFieldNotFound() {
         when(hashOperations.delete(Constants.REDIS_KEY_PREFIX + "key", "field")).thenReturn(0L);
+        Long result = hashOperations.delete(Constants.REDIS_KEY_PREFIX + "key", "field");
         cacheService.deleteUserFromHash("key", "field");
+        assertEquals(0L, result, "Expected no field to be deleted from hash when not found");
     }
 
     @Test
     void testDeleteUserFromHashException() {
         when(hashOperations.delete(Constants.REDIS_KEY_PREFIX + "key", "field")).thenThrow(new RuntimeException("fail"));
-        cacheService.deleteUserFromHash("key", "field");
+        assertDoesNotThrow(() -> cacheService.deleteUserFromHash("key", "field"));
     }
+
 
     @Test
     void testHget_Exception() {

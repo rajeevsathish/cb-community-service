@@ -19,6 +19,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceImplTest {
@@ -39,12 +40,12 @@ class UserServiceImplTest {
         dbRecord.put(Constants.ID, "user-1");
         dbRecord.put(Constants.FIRST_NAME, "John");
         dbRecord.put(Constants.CHANNEL, "channel-1");
-        dbRecord.put(Constants.PROFILE_DETAILS, "{\"profileImg\":\"img.png\",\"professionalDetails\":[{\"designation\":\"Engineer\"}],\"profileStatus\":\"active\"}");
+        dbRecord.put(Constants.PROFILE_DETAILS,
+                "{\"profileImg\":\"img.png\",\"professionalDetails\":[{\"designation\":\"Engineer\"}],\"profileStatus\":\"active\"}");
 
-        List<Map<String, Object>> dbResult = List.of(dbRecord);
         when(cassandraOperation.getRecordsByPropertiesWithoutFiltering(
                 anyString(), anyString(), anyMap(), anyList(), any()))
-                .thenReturn(dbResult);
+                .thenReturn(List.of(dbRecord));
 
         Map<String, Object> profileMap = new HashMap<>();
         profileMap.put(Constants.PROFILE_IMG, "img.png");
@@ -73,7 +74,7 @@ class UserServiceImplTest {
         dbRecord.put(Constants.ID, "user-2");
         dbRecord.put(Constants.FIRST_NAME, "Alice");
         dbRecord.put(Constants.CHANNEL, "channel-2");
-        dbRecord.put(Constants.PROFILE_DETAILS, ""); // blank profile
+        dbRecord.put(Constants.PROFILE_DETAILS, "");
 
         when(cassandraOperation.getRecordsByPropertiesWithoutFiltering(
                 anyString(), anyString(), anyMap(), anyList(), any()))
@@ -86,6 +87,40 @@ class UserServiceImplTest {
         Map<String, Object> userMap = (Map<String, Object>) result.get(0);
         assertEquals("user-2", userMap.get(Constants.USER_ID_KEY));
         assertEquals("Alice", userMap.get(Constants.FIRST_NAME_KEY));
+    }
+
+    @Test
+    void testFetchUserFromprimary_withMalformedProfileDetails_throwsCustomException() throws Exception {
+        List<String> userIds = List.of("user-3");
+        Map<String, Object> dbRecord = new HashMap<>();
+        dbRecord.put(Constants.ID, "user-3");
+        dbRecord.put(Constants.FIRST_NAME, "Bob");
+        dbRecord.put(Constants.CHANNEL, "channel-3");
+        dbRecord.put(Constants.PROFILE_DETAILS, "{\"invalidJson\":}");
+
+        when(cassandraOperation.getRecordsByPropertiesWithoutFiltering(
+                anyString(), anyString(), anyMap(), anyList(), any()))
+                .thenReturn(List.of(dbRecord));
+
+        when(objectMapper.readValue(anyString(), any(TypeReference.class)))
+                .thenThrow(new RuntimeException("Invalid JSON"));
+
+        CustomException exception = assertThrows(CustomException.class,
+                () -> userService.fetchUserFromprimary(userIds));
+
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, exception.getHttpStatusCode());
+        assertEquals("error while processing", exception.getMessage());
+    }
+
+    @Test
+    void testFetchUserFromprimary_withEmptyUserList() {
+        when(cassandraOperation.getRecordsByPropertiesWithoutFiltering(
+                anyString(), anyString(), anyMap(), anyList(), any()))
+                .thenReturn(Collections.emptyList());
+
+        List<Object> result = userService.fetchUserFromprimary(Collections.emptyList());
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
     }
 
 }

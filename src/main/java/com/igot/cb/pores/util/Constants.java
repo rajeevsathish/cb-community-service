@@ -100,7 +100,6 @@ public class Constants {
     public static final String LAST_UPDATED_AT = "lastupdatedat";
     public static final String USER_DETAILS = "userDetails";
     public static final String USER_COUNT = "usersJoinedCount";
-    public static String CommunityId = "communityId";
     public static final String ALREADY_JOINED_COMMUNITY = "This user is already joined this community";
     public static final String API_COMMUNITY_JOIN = "api.community.join";
     public static final String API_COMMUNITY_LIST_USER = "api.community.list.of.joined";
@@ -177,7 +176,7 @@ public class Constants {
     public static final String REPORTED = "reported";
     public static final String COMMUNITY_REPORT_FAILED = "Failed to report discussion";
     public static final String REPORTED_BY = "reportedBy";
-    public static final String _DOC = "_doc";
+    public static final String DOC = "_doc";
     public static final String DISCUSSION_COMMUNITY_KEY = "discussionCommunities";
     public static final String COMMUNITY_UPLOAD_FILE = "api.community.uploadFile";
     public static final String COMMUNITY_FILE_EMPTY = "File is empty";
@@ -252,6 +251,16 @@ public class Constants {
     public static final String NUMBER = "number";
     public static final String LONG = "long";
     public static final Object DATE = "date";
+    public static final String VALIDATION_FAILED_ERROR_MSG = "Validation failed: {}";
+    public static final String RECORD_COMING_FROM_CACHE_MSG = "Record coming from redis cache";
+    public static final String RECORD_COMING_FROM_POSTGRES_MSG = "Record coming from postgres db";
+    public static final String INVALID_ID_MSG = "Invalid Id: {}";
+    public static final String ERR_WHILE_JOINIG = "Error while joining community:";
+    public static final String UPLOAD_FAILED_ERR_MSG = "Failed to upload file. Exception: ";
+    public static final String ERR_WHILE_CHECKING_COMMUNITY_EXISTENCE = "Error checking community existence in Elasticsearch: {}";
+    public static final String ERR_RECEIVED = "Error received: ";
+    public static final String ERR_RESPONSE = "Error Response: ";
+    public static final String DATA_CENTRE = "datacenter1";
 
     private Constants() {
     }
