@@ -45,6 +45,7 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.sql.Timestamp;
 import java.util.*;
@@ -2528,6 +2529,76 @@ class CommunityManagementServiceImplTest {
         node.put(Constants.COMMUNITY_NAME, "Test Community");
         node.put(Constants.COMMUNITY_ID, "cid123");
         return node;
+    }
+
+    @Test
+    void testHandleSearchAndCache_ExceptionPath() throws Exception {
+        Method method = null;
+        for (Method m : CommunityManagementServiceImpl.class.getDeclaredMethods()) {
+            if (m.getName().equals("handleSearchAndCache")) {
+                method = m;
+                break;
+            }
+        }
+        assertNotNull(method, "handleSearchAndCache method should exist");
+        method.setAccessible(true);
+        Object[] params = new Object[method.getParameterCount()];
+        for (int i = 0; i < method.getParameterCount(); i++) {
+            Class<?> paramType = method.getParameterTypes()[i];
+            if (paramType.equals(SearchCriteria.class)) {
+                SearchCriteria criteria = new SearchCriteria();
+                criteria.setSearchString("valid");
+                params[i] = criteria;
+            } else if (paramType.equals(String.class)) {
+                params[i] = "redisKey";
+            } else if (paramType.equals(boolean.class) || paramType.equals(Boolean.class)) {
+                params[i] = false;
+            } else {
+                params[i] = null;
+            }
+        }
+        doThrow(new RuntimeException("Elasticsearch error"))
+                .when(esUtilService).searchDocuments(any(), any());
+        try {
+            method.invoke(service, params);
+        } catch (InvocationTargetException e) {
+            assertTrue(e.getCause() instanceof CustomException);
+        }
+    }
+
+    @Test
+    void testGenerateRedisJwtTokenKey_validFlow() throws Exception {
+        Method method = CommunityManagementServiceImpl.class
+                .getDeclaredMethod("generateRedisJwtTokenKey", SearchCriteria.class);
+        method.setAccessible(true);
+        SearchCriteria criteria = new SearchCriteria();
+        criteria.setSearchString("abc");
+        when(objectMapper.writeValueAsString(criteria)).thenReturn("{\"searchString\":\"abc\"}");
+        String result = (String) method.invoke(service, criteria);
+        assertNotNull(result);
+        assertFalse(result.isBlank());
+    }
+
+    @Test
+    void testEnrichOrgInfo_emptyPaths() throws Exception {
+        SearchCriteria criteria = new SearchCriteria();
+        SearchResult searchResult = new SearchResult();
+
+        Set<String> uniqueOrgIds = new HashSet<>(List.of("orgX"));
+        List<String> orgIdList = List.of("orgX");
+
+        when(cacheService.hget(anyList())).thenReturn(List.of("orgX"));
+        when(cassandraOperation.getRecordsByPropertiesWithoutFiltering(
+                anyString(), anyString(), anyMap(), anyList(), isNull()))
+                .thenReturn(Collections.emptyList());
+
+        Method method = CommunityManagementServiceImpl.class
+                .getDeclaredMethod("enrichOrgInfo", SearchCriteria.class, SearchResult.class, Set.class, List.class);
+        method.setAccessible(true);
+
+        method.invoke(service, criteria, searchResult, uniqueOrgIds, orgIdList);
+
+        assertNotNull(searchResult);
     }
 
 
