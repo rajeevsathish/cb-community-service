@@ -42,6 +42,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
@@ -147,13 +149,8 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
     public ApiResponse create(JsonNode communityDetails, String authToken) {
         log.info("CommunityEngagementService::create:creating community");
         ApiResponse response = ProjectUtil.createDefaultResponse(Constants.API_COMMUNITY_CREATE);
-        String userId = accessTokenValidator.verifyUserToken(authToken);
-        if (StringUtils.isBlank(userId)) {
-            response.getParams().setStatus(Constants.FAILED);
-            response.getParams().setErrMsg(Constants.USER_ID_DOESNT_EXIST);
-            response.setResponseCode(HttpStatus.BAD_REQUEST);
-            return response;
-        }
+        String userId = validateUser(authToken, response, Constants.USER_ID_DOESNT_EXIST, HttpStatus.BAD_REQUEST);
+        if (StringUtils.isBlank(userId)) return response;
         try {
             payloadValidation.validatePayload(Constants.PAYLOAD_VALIDATION_FILE, communityDetails);
         } catch (CustomException e) {
@@ -258,8 +255,7 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
                 log.info(
                         "created community");
                 updateCommunityCountInTopic(category, Constants.INCREMENT);
-                cacheService.deleteCache(Constants.CATEGORY_LIST_ALL_REDIS_KEY_PREFIX);
-                cacheService.deleteCache(generateRedisJwtTokenKey(createDefaultSearchPayload()));
+                invalidateCommunityCaches();
                 response.getResult().put(Constants.STATUS, Constants.SUCCESSFULLY_CREATED);
                 response.getResult().put(Constants.COMMUNITY_ID, communityId);
                 return response;
@@ -332,13 +328,8 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
     public ApiResponse read(String communityId, String authToken) {
         log.info("CommunityEngagementService:read:reading community");
         ApiResponse response = ProjectUtil.createDefaultResponse(Constants.API_ORG_BOOKMARK_READ);
-        String userId = accessTokenValidator.verifyUserToken(authToken);
-        if (StringUtils.isBlank(userId)) {
-            logger.error(Constants.ID_NOT_FOUND);
-            response.setResponseCode(HttpStatus.INTERNAL_SERVER_ERROR);
-            response.getParams().setErrMsg(Constants.ID_NOT_FOUND);
-            return response;
-        }
+        String userId = validateUser(authToken, response, Constants.ID_NOT_FOUND, HttpStatus.INTERNAL_SERVER_ERROR);
+        if (StringUtils.isBlank(userId)) return response;
         if (StringUtils.isEmpty(communityId)) {
             logger.error(Constants.COMMUNITY_ID_NOT_FOUND);
             response.setResponseCode(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -382,12 +373,8 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
     public ApiResponse delete(String communityId, String authToken) {
         log.info("CommunityEngagementService:delete:deleting community");
         ApiResponse response = ProjectUtil.createDefaultResponse(Constants.API_COMMUNITY_DELETE);
-        String userId = accessTokenValidator.verifyUserToken(authToken);
-        if (StringUtils.isBlank(userId)) {
-            response.getParams().setErrMsg(Constants.USER_ID_DOESNT_EXIST);
-            response.setResponseCode(HttpStatus.BAD_REQUEST);
-            return response;
-        }
+        String userId = validateUser(authToken, response, Constants.USER_ID_DOESNT_EXIST, HttpStatus.BAD_REQUEST);
+        if (StringUtils.isBlank(userId)) return response;
         if (StringUtils.isEmpty(communityId)) {
             logger.error(Constants.COMMUNITY_ID_NOT_FOUND);
             response.setResponseCode(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -415,8 +402,7 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
                 esUtilService.updateDocument(communityIndex, Constants.INDEX_TYPE, communityId, map, cbServerProperties.getElasticCommunityJsonPath());
                 updateCommunityCountInTopic(category, Constants.DECREMENT);
                 cacheService.deleteCache(communityId);
-                cacheService.deleteCache(Constants.CATEGORY_LIST_ALL_REDIS_KEY_PREFIX);
-                cacheService.deleteCache(generateRedisJwtTokenKey(createDefaultSearchPayload()));
+                invalidateCommunityCaches();
                 response.getResult().put(Constants.RESPONSE,
                         "Deleted the community with id: " + communityId);
             } else {
@@ -437,12 +423,8 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
         log.info("CommunityEngagementService:update:updating community");
         ApiResponse response = ProjectUtil.createDefaultResponse(Constants.API_COMMUNITY_UPDATE);
         try {
-            String userId = accessTokenValidator.verifyUserToken(authToken);
-            if (StringUtils.isBlank(userId)) {
-                response.getParams().setErrMsg(Constants.USER_ID_DOESNT_EXIST);
-                response.setResponseCode(HttpStatus.BAD_REQUEST);
-                return response;
-            }
+            String userId = validateUser(authToken, response, Constants.USER_ID_DOESNT_EXIST, HttpStatus.BAD_REQUEST);
+            if (StringUtils.isBlank(userId)) return response;
             if (communityDetails.has(Constants.COMMUNITY_ID) && !communityDetails.get(Constants.COMMUNITY_ID).isNull()) {
                 String communityId = communityDetails.get(Constants.COMMUNITY_ID).asText();
                 Optional<CommunityEntity> communityEntityOptional = communityEngagementRepository.findByCommunityIdAndIsActive(communityId, true);
@@ -492,8 +474,7 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
                 updateCommunityDetails(communityEntityOptional.get(),userId,dataNode, Constants.DRAFT);
                 response.getResult().put(Constants.RESPONSE,
                         "Updated the community with id: " + communityId);
-                cacheService.deleteCache(Constants.CATEGORY_LIST_ALL_REDIS_KEY_PREFIX);
-                cacheService.deleteCache(generateRedisJwtTokenKey(createDefaultSearchPayload()));
+                invalidateCommunityCaches();
                 cacheService.deleteCache(generateRedisJwtTokenKey(createDefaultSearchCriteriaForTopic()));
                 return response;
 
@@ -516,12 +497,8 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
         log.info("CommunityEngagementService:joinAndUnjoinCommunity:joining");
         ApiResponse response = ProjectUtil.createDefaultResponse(Constants.API_COMMUNITY_JOIN);
         try {
-            String userId = accessTokenValidator.verifyUserToken(authToken);
-            if (StringUtils.isBlank(userId)) {
-                response.getParams().setErrMsg(Constants.USER_ID_DOESNT_EXIST);
-                response.setResponseCode(HttpStatus.BAD_REQUEST);
-                return response;
-            }
+            String userId = validateUser(authToken, response, Constants.USER_ID_DOESNT_EXIST, HttpStatus.BAD_REQUEST);
+            if (StringUtils.isBlank(userId)) return response;
             String error = validateJoinPayload(request);
             if (StringUtils.isNotBlank(error)) {
                 return returnErrorMsg(error, HttpStatus.BAD_REQUEST, response);
@@ -626,12 +603,8 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
         log.info("CommunityEngagementService:communitiesJoinedByUser:reading");
         ApiResponse response = ProjectUtil.createDefaultResponse(Constants.API_COMMUNITY_USER_JOINED);
         try {
-            String userId = accessTokenValidator.verifyUserToken(authToken);
-            if (StringUtils.isBlank(userId)) {
-                response.getParams().setErrMsg(Constants.USER_ID_DOESNT_EXIST);
-                response.setResponseCode(HttpStatus.BAD_REQUEST);
-                return response;
-            }
+            String userId = validateUser(authToken, response, Constants.USER_ID_DOESNT_EXIST, HttpStatus.BAD_REQUEST);
+            if (StringUtils.isBlank(userId)) return response;
             Map<String, Object> propertyMap = new HashMap<>();
             propertyMap.put(Constants.USER_ID, userId);
             List<String> fields = new ArrayList();
@@ -702,12 +675,8 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
             return response;
         }
         try {
-            String userId = accessTokenValidator.verifyUserToken(authToken);
-            if (StringUtils.isBlank(userId)) {
-                response.getParams().setErrMsg(Constants.USER_ID_DOESNT_EXIST);
-                response.setResponseCode(HttpStatus.BAD_REQUEST);
-                return response;
-            }
+            String userId = validateUser(authToken, response, Constants.USER_ID_DOESNT_EXIST, HttpStatus.BAD_REQUEST);
+            if (StringUtils.isBlank(userId)) return response;
             String communityId = (String) requestPayload.get(Constants.COMMUNITY_ID);
             int offset = 0;
             int limit = 10;
@@ -897,12 +866,8 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
         log.info("CommunityEngagementService:unJoinCommunity::unjoining");
         ApiResponse response = ProjectUtil.createDefaultResponse(Constants.API_COMMUNITY_UNJOIN);
         try {
-            String userId = accessTokenValidator.verifyUserToken(authToken);
-            if (StringUtils.isBlank(userId)) {
-                response.getParams().setErrMsg(Constants.USER_ID_DOESNT_EXIST);
-                response.setResponseCode(HttpStatus.BAD_REQUEST);
-                return response;
-            }
+            String userId = validateUser(authToken, response, Constants.USER_ID_DOESNT_EXIST, HttpStatus.BAD_REQUEST);
+            if (StringUtils.isBlank(userId)) return response;
             String error = validateJoinPayload(request);
             if (StringUtils.isNotBlank(error)) {
                 return returnErrorMsg(error, HttpStatus.BAD_REQUEST, response);
@@ -1001,13 +966,8 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
     public ApiResponse categoryCreate(JsonNode categoryDetails, String authToken) {
         log.info("CommunityEngagementService:categoryCreate:creating");
         ApiResponse response = ProjectUtil.createDefaultResponse(Constants.API_CATEGORY_CRAETE);
-        String userId = accessTokenValidator.verifyUserToken(authToken);
-        if (StringUtils.isBlank(userId)) {
-            response.getParams().setStatus(Constants.FAILED);
-            response.getParams().setErrMsg(Constants.USER_ID_DOESNT_EXIST);
-            response.setResponseCode(HttpStatus.BAD_REQUEST);
-            return response;
-        }
+        String userId = validateUser(authToken, response, Constants.USER_ID_DOESNT_EXIST, HttpStatus.BAD_REQUEST);
+        if (StringUtils.isBlank(userId)) return response;
         List<Map<String, Object>> userDetails;
         Map<String, Object> propertyMap = new HashMap<>();
         propertyMap.put(Constants.ID, userId);
@@ -1025,15 +985,8 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
             return response;
         }
 
-        try {
-            payloadValidation.validatePayload(Constants.CATEGORY_PAYLOAD_VALIDATION_FILE, categoryDetails);
-        } catch (CustomException e) {
-            log.error(Constants.VALIDATION_FAILED_ERROR_MSG, e.getMessage(), e);
-            response.getParams().setStatus(Constants.FAILED);
-            response.getParams().setErrMsg(e.getMessage());
-            response.setResponseCode(HttpStatus.BAD_REQUEST);
+        if (!validatePayload(Constants.CATEGORY_PAYLOAD_VALIDATION_FILE, categoryDetails, response))
             return response;
-        }
         Timestamp currentTimestamp = new Timestamp(System.currentTimeMillis());
         try {
             if (categoryDetails.has(Constants.PARENT_ID)) {
@@ -1101,19 +1054,9 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
     public ApiResponse readCategory(String categoryId, String authToken) {
         log.info("CommunityEngagementService:readCategory:reading community");
         ApiResponse response = ProjectUtil.createDefaultResponse(Constants.API_CATEGORY_READ);
-        String userId = accessTokenValidator.verifyUserToken(authToken);
-        if (StringUtils.isBlank(userId)) {
-            logger.error(Constants.ID_NOT_FOUND);
-            response.setResponseCode(HttpStatus.INTERNAL_SERVER_ERROR);
-            response.getParams().setErrMsg(Constants.ID_NOT_FOUND);
-            return response;
-        }
-        if (StringUtils.isEmpty(categoryId)) {
-            logger.error("categoryId not found");
-            response.setResponseCode(HttpStatus.INTERNAL_SERVER_ERROR);
-            response.getParams().setErrMsg(Constants.ID_NOT_FOUND);
-            return response;
-        }
+        String userId = validateUser(authToken, response, Constants.ID_NOT_FOUND, HttpStatus.INTERNAL_SERVER_ERROR);
+        if (StringUtils.isBlank(userId)) return response;
+        if (!validateId(categoryId, "categoryId not found", response)) return response;
         try {
             Optional<CommunityCategory> categoryOptional = Optional.ofNullable(
                 categoryRepository.findByCategoryIdAndIsActive(
@@ -1144,19 +1087,9 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
     public ApiResponse deleteCategory(String categoryId, String authToken) {
         log.info("CommunityEngagementService:deleteCategory:deleting community");
         ApiResponse response = ProjectUtil.createDefaultResponse(Constants.API_CATEGORY_DELETE);
-        String userId = accessTokenValidator.verifyUserToken(authToken);
-        if (StringUtils.isBlank(userId)) {
-            logger.error(Constants.ID_NOT_FOUND);
-            response.setResponseCode(HttpStatus.INTERNAL_SERVER_ERROR);
-            response.getParams().setErrMsg(Constants.ID_NOT_FOUND);
-            return response;
-        }
-        if (StringUtils.isEmpty(categoryId)) {
-            logger.error("categoryId not found");
-            response.setResponseCode(HttpStatus.INTERNAL_SERVER_ERROR);
-            response.getParams().setErrMsg(Constants.ID_NOT_FOUND);
-            return response;
-        }
+        String userId = validateUser(authToken, response, Constants.ID_NOT_FOUND, HttpStatus.INTERNAL_SERVER_ERROR);
+        if (StringUtils.isBlank(userId)) return response;
+        if (!validateId(categoryId, "categoryId not found", response)) return response;
         try {
             Optional<CommunityCategory> categoryOptional = Optional.ofNullable(
                 categoryRepository.findByCategoryIdAndIsActive(
@@ -1198,22 +1131,11 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
     public ApiResponse updateCategory(JsonNode categoryDetails, String authToken) {
         log.info("CommunityEngagementService:updateCategory:updating category");
         ApiResponse response = ProjectUtil.createDefaultResponse(Constants.API_CATEGORY_UPDATE);
-        String userId = accessTokenValidator.verifyUserToken(authToken);
-        if (StringUtils.isBlank(userId)) {
-            logger.error(Constants.ID_NOT_FOUND);
-            response.setResponseCode(HttpStatus.INTERNAL_SERVER_ERROR);
-            response.getParams().setErrMsg(Constants.ID_NOT_FOUND);
+        String userId = validateUser(authToken, response, Constants.ID_NOT_FOUND, HttpStatus.INTERNAL_SERVER_ERROR);
+        if (StringUtils.isBlank(userId)) return response;
+        if (!validatePayload(Constants.CATEGORY_PAYLOAD_VALIDATION_FILE, categoryDetails, response))
             return response;
-        }
-        try {
-            payloadValidation.validatePayload(Constants.CATEGORY_PAYLOAD_VALIDATION_FILE, categoryDetails);
-        } catch (CustomException e) {
-            log.error(Constants.VALIDATION_FAILED_ERROR_MSG, e.getMessage(), e);
-            response.getParams().setStatus(Constants.FAILED);
-            response.getParams().setErrMsg(e.getMessage());
-            response.setResponseCode(HttpStatus.BAD_REQUEST);
-            return response;
-        }
+
         try {
             if (categoryDetails.has(Constants.CATEGORY_ID) && !categoryDetails.get(
                 Constants.CATEGORY_ID).isNull()) {
@@ -1793,12 +1715,8 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
         ApiResponse response = ProjectUtil.createDefaultResponse(
             Constants.API_LIST_ALL_COMMUNITIES_JOINED);
         try {
-            String userId = accessTokenValidator.verifyUserToken(authToken);
-            if (StringUtils.isBlank(userId)) {
-                response.getParams().setErrMsg(Constants.USER_ID_DOESNT_EXIST);
-                response.setResponseCode(HttpStatus.BAD_REQUEST);
-                return response;
-            }
+            String userId = validateUser(authToken, response, Constants.USER_ID_DOESNT_EXIST, HttpStatus.BAD_REQUEST);
+            if (StringUtils.isBlank(userId)) return response;
 
             Map<String, Object> propertyMap = new HashMap<>();
             propertyMap.put(Constants.USER_ID, userId);
@@ -1867,13 +1785,8 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
     public ApiResponse publish(JsonNode communityDetails, String authToken) {
         log.info("CommunityEngagementService:publish::inside method");
         ApiResponse response = ProjectUtil.createDefaultResponse(Constants.API_COMMUNITY_PUBLISH);
-        String userId = accessTokenValidator.verifyUserToken(authToken);
-        if (StringUtils.isBlank(userId)) {
-            response.getParams().setStatus(Constants.FAILED);
-            response.getParams().setErrMsg(Constants.USER_ID_DOESNT_EXIST);
-            response.setResponseCode(HttpStatus.BAD_REQUEST);
-            return response;
-        }
+        String userId = validateUser(authToken, response, Constants.USER_ID_DOESNT_EXIST, HttpStatus.BAD_REQUEST);
+        if (StringUtils.isBlank(userId)) return response;
         try {
             payloadValidation.validatePayload(Constants.COMMUNITY_PUBLISH_PAYLOAD_VALIDATION_FILE, communityDetails);
             if (esUtilService.isDuplicateCommunity(communityDetails.get(Constants.ORG_ID).asText(),
@@ -2346,5 +2259,83 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
         }
         return response;
     }
+
+
+    // --- Common helpers ---
+    private ApiResponse createDefaultApiResponse(String api) {
+        return ProjectUtil.createDefaultResponse(api);
+    }
+
+    private String validateUser(String authToken, ApiResponse response, String errorMessage, HttpStatus status) {
+        String userId = accessTokenValidator.verifyUserToken(authToken);
+        if (StringUtils.isBlank(userId)) {
+            response.getParams().setStatus(Constants.FAILED);
+            response.getParams().setErrMsg(errorMessage);
+            response.setResponseCode(status);
+            return null;
+        }
+        return userId;
+    }
+
+
+
+    private boolean validatePayload(String fileName, JsonNode node, ApiResponse response) {
+        try {
+            payloadValidation.validatePayload(fileName, node);
+            return true;
+        } catch (CustomException e) {
+            log.error(Constants.VALIDATION_FAILED_ERROR_MSG, e.getMessage(), e);
+            response.getParams().setStatus(Constants.FAILED);
+            response.getParams().setErrMsg(e.getMessage());
+            response.setResponseCode(HttpStatus.BAD_REQUEST);
+            return false;
+        }
+    }
+
+    private void invalidateCommunityCaches() {
+        try {
+            cacheService.deleteCache(Constants.CATEGORY_LIST_ALL_REDIS_KEY_PREFIX);
+            cacheService.deleteCache(generateRedisJwtTokenKey(createDefaultSearchPayload()));
+        } catch (Exception e) {
+            log.error("Error invalidating caches", e);
+        }
+    }
+
+    private ApiResponse setError(ApiResponse response, String msg, HttpStatus status) {
+        response.getParams().setStatus(Constants.FAILED);
+        response.getParams().setErrMsg(msg);
+        response.setResponseCode(status);
+        return response;
+    }
+
+    private boolean validateId(String id, String logMsg, ApiResponse response) {
+        if (StringUtils.isEmpty(id)) {
+            log.error(logMsg);
+            response.setResponseCode(HttpStatus.INTERNAL_SERVER_ERROR);
+            response.getParams().setErrMsg(Constants.ID_NOT_FOUND);
+            return false;
+        }
+        return true;
+    }
+
+    private <T> Optional<T> fetchFromCacheOrDb(
+            String cacheKey,
+            Supplier<Optional<T>> dbFetcher,
+            Function<T, Object> cacheValueExtractor) {
+        try {
+            String cachedJson = cacheService.getCache(cacheKey);
+            if (StringUtils.isNotEmpty(cachedJson)) {
+                log.info("Record from cache for {}", cacheKey);
+                return Optional.of((T) objectMapper.readValue(cachedJson, Object.class));
+            }
+            Optional<T> dbData = dbFetcher.get();
+            dbData.ifPresent(val -> cacheService.putCache(cacheKey, cacheValueExtractor.apply(val)));
+            return dbData;
+        } catch (Exception e) {
+            log.error("fetchFromCacheOrDb error for key {}", cacheKey, e);
+            return Optional.empty();
+        }
+    }
+
 
 }
