@@ -2601,6 +2601,161 @@ class CommunityManagementServiceImplTest {
         assertNotNull(searchResult);
     }
 
+    @Test
+    void testListOfCategory_objectMapperThrows() throws Exception {
+        String json = "[{\"id\":1}]";
+        when(cacheService.getCache(anyString())).thenReturn(json);
+        when(objectMapper.readValue(anyString(), any(TypeReference.class))).thenThrow(new RuntimeException("Parse fail"));
+        CustomException ex = assertThrows(CustomException.class, () -> service.listOfCategory());
+        assertEquals("error while processing", ex.getMessage());
+    }
+
+    @Test
+    void testValidateUser_blankToken() {
+        ApiResponse response = new ApiResponse();
+        when(accessTokenValidator.verifyUserToken("")).thenReturn("");
+        String result = invokePrivate("validateUser",
+                new Class[]{String.class, ApiResponse.class, String.class, HttpStatus.class},
+                new Object[]{"", response, "error", HttpStatus.BAD_REQUEST});
+        assertNull(result);
+        assertEquals("error", response.getParams().getErrMsg());
+    }
+
+    @Test
+    void testValidatePayload_exceptionThrown() {
+        ApiResponse response = new ApiResponse();
+        JsonNode node = new ObjectMapper().createObjectNode();
+        doThrow(new CustomException("error", "msg", HttpStatus.BAD_REQUEST))
+                .when(payloadValidation).validatePayload(anyString(), any());
+        Boolean result = (Boolean) invokePrivate("validatePayload",
+                new Class[]{String.class, JsonNode.class, ApiResponse.class},
+                new Object[]{"file.json", node, response});
+        assertFalse(result);
+        assertEquals(Constants.FAILED, response.getParams().getStatus());
+    }
+
+    @Test
+    void testInvalidateCommunityCaches_exception() {
+        doThrow(new RuntimeException("cache fail")).when(cacheService).deleteCache(anyString());
+        assertDoesNotThrow(() -> invokePrivate("invalidateCommunityCaches", new Class[]{}, new Object[]{}));
+    }
+
+    @Test
+    void testValidateId_falseWhenEmpty() {
+        ApiResponse response = new ApiResponse();
+        Boolean result = (Boolean) invokePrivate("validateId",
+                new Class[]{String.class, String.class, ApiResponse.class},
+                new Object[]{"", "log", response});
+        assertFalse(result);
+        assertEquals(Constants.ID_NOT_FOUND, response.getParams().getErrMsg());
+    }
+
+    @Test
+    void testValidatePayloadForListOfUsers_missingKeys() {
+        Map<String,Object> map = new HashMap<>();
+        String result = (String) invokePrivate("validatePayloadForListOfUsers",
+                new Class[]{Map.class}, new Object[]{map});
+        assertTrue(result.contains("Missing mandatory attributes"));
+    }
+
+    @Test
+    void testFetchDataForKeys_withDeserializationError() throws Exception {
+        when(cacheService.hget(anyList())).thenReturn(List.of("{badjson}"));
+        doAnswer(invocation -> { throw new IOException("parse fail"); })
+                .when(objectMapper)
+                .readValue(anyString(), any(TypeReference.class));
+        List<Object> result = invokePrivate("fetchDataForKeys",
+                new Class[]{List.class}, new Object[]{List.of("key1")});
+        assertNotNull(result);
+    }
+
+
+    @Test
+    void testUploadFile_emptyFile() {
+        MultipartFile file = mock(MultipartFile.class);
+        when(file.isEmpty()).thenReturn(true);
+        ApiResponse res = service.uploadFile(file, "cid");
+        assertEquals(HttpStatus.BAD_REQUEST, res.getResponseCode());
+    }
+
+    @Test
+    void testUploadFile_withIOException() throws Exception {
+        MultipartFile file = mock(MultipartFile.class);
+        when(file.isEmpty()).thenReturn(false);
+        when(file.getOriginalFilename()).thenReturn("abc.txt");
+        when(file.getBytes()).thenThrow(new IOException("fail"));
+        ApiResponse res = service.uploadFile(file, "cid");
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, res.getResponseCode());
+    }
+
+    @Test
+    void testReport_alreadyReported() {
+        Map<String, Object> data = Map.of(Constants.COMMUNITY_ID, "cid", Constants.REPORTED_REASON, List.of("spam"));
+        when(accessTokenValidator.verifyUserToken(any())).thenReturn("user1");
+        CommunityEntity e = new CommunityEntity();
+        e.setData(new ObjectMapper().createObjectNode().put(Constants.STATUS, Constants.ACTIVE));
+        e.setActive(true);
+        when(communityEngagementRepository.findById(any())).thenReturn(Optional.of(e));
+        when(cassandraOperation.getRecordsByPropertiesWithoutFiltering(any(), any(), any(), any(), any()))
+                .thenReturn(List.of(Map.of("dummy", "val")));
+        ApiResponse r = service.report("token", data);
+        assertEquals(HttpStatus.CONFLICT, r.getResponseCode());
+    }
+
+    @Test
+    void testListOfCategory_emptyDB() {
+        when(cacheService.getCache(anyString())).thenReturn(null);
+        when(categoryRepository.findByParentIdAndIsActive(0, true)).thenReturn(Collections.emptyList());
+
+        ApiResponse response = service.listOfCategory();
+
+        assertNotNull(response);
+        assertEquals(HttpStatus.BAD_REQUEST, response.getResponseCode());
+        assertEquals(Constants.CATEGORIES_NOT_FOUND, response.getParams().getErrMsg());
+    }
+
+
+    @Test
+    void testSearchCommunity_shortSearchString() {
+        SearchCriteria c = new SearchCriteria();
+        c.setSearchString("a");
+        CustomException ex = assertThrows(CustomException.class, () -> service.searchCommunity(c));
+        assertEquals("error while processing", ex.getMessage());
+    }
+
+
+    @Test
+    void testSyncUserWithCommunity_invalidFileType() throws Exception {
+        MultipartFile file = mock(MultipartFile.class);
+        when(file.getOriginalFilename()).thenReturn("file.txt");
+        when(file.getInputStream()).thenReturn(new ByteArrayInputStream("".getBytes()));
+        assertThrows(RuntimeException.class, () ->
+                invokePrivate("validateFileAndProcessRows", new Class[]{MultipartFile.class}, new Object[]{file}));
+    }
+
+    @Test
+    void testSearchCommunityFromPrimary_runtimeException() throws Exception {
+        SearchCriteria sc = new SearchCriteria();
+        when(esUtilService.searchDocuments(anyString(), any())).thenThrow(new RuntimeException("fail"));
+        ApiResponse response = service.searchCommunityFromPrimary(sc);
+        assertNotNull(response);
+        assertEquals(HttpStatus.BAD_REQUEST, response.getResponseCode());
+        assertEquals(Constants.FAILED_CONST, response.getParams().getStatus());
+        assertTrue(response.getParams().getErrMsg().contains("error while processing"));
+    }
+
+
+    @SuppressWarnings("unchecked")
+    private <T> T invokePrivate(String name, Class[] paramTypes, Object[] args) {
+        try {
+            Method m = CommunityManagementServiceImpl.class.getDeclaredMethod(name, paramTypes);
+            m.setAccessible(true);
+            return (T) m.invoke(service, args);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 
 }
 

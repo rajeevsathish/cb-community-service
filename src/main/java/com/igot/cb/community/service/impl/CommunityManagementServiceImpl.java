@@ -2260,12 +2260,6 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
         return response;
     }
 
-
-    // --- Common helpers ---
-    private ApiResponse createDefaultApiResponse(String api) {
-        return ProjectUtil.createDefaultResponse(api);
-    }
-
     private String validateUser(String authToken, ApiResponse response, String errorMessage, HttpStatus status) {
         String userId = accessTokenValidator.verifyUserToken(authToken);
         if (StringUtils.isBlank(userId)) {
@@ -2301,13 +2295,6 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
         }
     }
 
-    private ApiResponse setError(ApiResponse response, String msg, HttpStatus status) {
-        response.getParams().setStatus(Constants.FAILED);
-        response.getParams().setErrMsg(msg);
-        response.setResponseCode(status);
-        return response;
-    }
-
     private boolean validateId(String id, String logMsg, ApiResponse response) {
         if (StringUtils.isEmpty(id)) {
             log.error(logMsg);
@@ -2317,25 +2304,5 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
         }
         return true;
     }
-
-    private <T> Optional<T> fetchFromCacheOrDb(
-            String cacheKey,
-            Supplier<Optional<T>> dbFetcher,
-            Function<T, Object> cacheValueExtractor) {
-        try {
-            String cachedJson = cacheService.getCache(cacheKey);
-            if (StringUtils.isNotEmpty(cachedJson)) {
-                log.info("Record from cache for {}", cacheKey);
-                return Optional.of((T) objectMapper.readValue(cachedJson, Object.class));
-            }
-            Optional<T> dbData = dbFetcher.get();
-            dbData.ifPresent(val -> cacheService.putCache(cacheKey, cacheValueExtractor.apply(val)));
-            return dbData;
-        } catch (Exception e) {
-            log.error("fetchFromCacheOrDb error for key {}", cacheKey, e);
-            return Optional.empty();
-        }
-    }
-
 
 }
