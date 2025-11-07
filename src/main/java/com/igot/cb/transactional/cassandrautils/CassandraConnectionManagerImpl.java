@@ -83,8 +83,8 @@ public class CassandraConnectionManagerImpl implements CassandraConnectionManage
             }
             List<String> hosts = Arrays.asList(cassandraHost.split(","));
             List<InetSocketAddress> contactPoints = hosts.stream()
-                    .map(host -> new InetSocketAddress(host.trim(), 9042)) // Assuming default port 9042
-                    .collect(Collectors.toList());
+                    .map(host -> new InetSocketAddress(host.trim(), 9042))
+                    .toList();
             List<String> contactPointsString = hosts.stream()
                     .map(host -> host.trim() + ":9042") // Ensure proper host:port format
                     .collect(Collectors.toList());

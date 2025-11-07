@@ -1,5 +1,6 @@
 package com.igot.cb.community.service.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.igot.cb.community.service.UserService;
@@ -68,8 +69,18 @@ public class UserServiceImpl implements UserService {
         return userMap;
     }
 
-    private void populateProfileDetails(Map<String, Object> userMap, String profileDetails) throws Exception {
-        Map<String, Object> profileDetailsMap = objectMapper.readValue(profileDetails, new TypeReference<HashMap<String, Object>>() {});
+    private void populateProfileDetails(Map<String, Object> userMap, String profileDetails) throws CustomException {
+        Map<String, Object> profileDetailsMap = null;
+        try {
+            profileDetailsMap = objectMapper.readValue(profileDetails, new TypeReference<HashMap<String, Object>>() {});
+        } catch (JsonProcessingException e) {
+            log.error("Failed to populate profile details", e);
+            throw new CustomException(
+                    "PROFILE_PARSE_ERROR",
+                    "Unable to parse profile details",
+                    HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
         userMap.put(Constants.PROFILE_IMG_KEY, "");
         userMap.put(Constants.DESIGNATION_KEY, "");
         userMap.put(Constants.PROFILE_STATUS, "");

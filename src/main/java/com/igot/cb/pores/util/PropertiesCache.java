@@ -42,6 +42,7 @@ public class PropertiesCache {
             try {
                 configProp.load(in);
             } catch (IOException e) {
+                logger.error("I/O error occurred while processing the request", e);
             }
         }
     }

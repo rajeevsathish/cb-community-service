@@ -59,7 +59,6 @@ public class NotificationServiceImpl implements NotificationService {
   public void sendNotification(List<String> moderatorIds, String communityId, String userId,
       String communityName) {
     logger.info("NotificationService::sendNotification:Sending notification to moderators");
-    List<String> fields = Arrays.asList(Constants.FIRST_NAME);
     moderatorIds.add(userId);
     Map<String, Object> propertiesMap = new HashMap<>();
     propertiesMap.put(Constants.ID, moderatorIds);
@@ -168,14 +167,14 @@ public class NotificationServiceImpl implements NotificationService {
     builder.append(props.getNotifyServiceHost()).append(props.getNotifyServicePathAsync());
     try {
       Map<String, Object> response = outboundRequestHandlerService.fetchResultUsingPost(builder.toString(), request, null);
-      logger.debug("The email notification is successfully sent, response is: " + response);
+      logger.debug("The email notification is successfully sent, response is: {}", response);
     } catch (Exception e) {
       logger.error("Exception while posting the data in notification service: ", e);
     }
   }
 
   private String constructEmailTemplate(String templateName, Map<String, Object> params) {
-    String replacedHTML = new String();
+    String replacedHTML = "";
     try {
       Map<String, Object> propertyMap = new HashMap<>();
       propertyMap.put(Constants.NAME, templateName);

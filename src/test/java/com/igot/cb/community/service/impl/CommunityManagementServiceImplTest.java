@@ -2507,9 +2507,9 @@ class CommunityManagementServiceImplTest {
         when(cassandraOperation.getRecordsByPropertiesWithoutFiltering(eq(Constants.KEYSPACE_SUNBIRD), eq(Constants.TABLE_ORGANISATION), anyMap(), anyList(), isNull())).thenReturn(List.of(cassandraOrgInfo));
 
         // Act - invoke private method via reflection
-        Method method = CommunityManagementServiceImpl.class.getDeclaredMethod("enrichOrgInfo", SearchCriteria.class, SearchResult.class, Set.class, List.class);
+        Method method = CommunityManagementServiceImpl.class.getDeclaredMethod("enrichOrgInfo", SearchResult.class, Set.class, List.class);
         method.setAccessible(true);
-        method.invoke(service, criteria, searchResult, uniqueOrgIds, orgIdList);
+        method.invoke(service, searchResult, uniqueOrgIds, orgIdList);
 
         // Assert
         List<Map<String, Object>> additionalInfo = searchResult.getAdditionalInfo();
@@ -2593,10 +2593,10 @@ class CommunityManagementServiceImplTest {
                 .thenReturn(Collections.emptyList());
 
         Method method = CommunityManagementServiceImpl.class
-                .getDeclaredMethod("enrichOrgInfo", SearchCriteria.class, SearchResult.class, Set.class, List.class);
+                .getDeclaredMethod("enrichOrgInfo", SearchResult.class, Set.class, List.class);
         method.setAccessible(true);
 
-        method.invoke(service, criteria, searchResult, uniqueOrgIds, orgIdList);
+        method.invoke(service, searchResult, uniqueOrgIds, orgIdList);
 
         assertNotNull(searchResult);
     }

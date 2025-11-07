@@ -79,8 +79,8 @@ public class CacheService {
       // Add each field to the hash only if it does not exist
       HashOperations<String, String, String> hashOps = redisTemplate.opsForHash();
       for (Map.Entry<String, String> entry : userMap.entrySet()) {
-        Boolean isAbsent = hashOps.putIfAbsent(key, entry.getKey(), entry.getValue());
-        // Optional: track how many were actually added
+          hashOps.putIfAbsent(key, entry.getKey(), entry.getValue());
+          // Optional: track how many were actually added
       }
     } catch (Exception e) {
       log.error("Error while adding users to Redis Hash: {}", e.getMessage(), e);

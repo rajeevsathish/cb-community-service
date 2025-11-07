@@ -9,10 +9,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import com.igot.cb.pores.exceptions.CustomException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -48,7 +51,12 @@ public class FileProcessService {
       log.info("Number of Data Rows Processed: " + dataRows.size());
     } catch (Exception e) {
       log.error(e.getMessage());
-      throw new RuntimeException(e.getMessage());
+        throw new CustomException(
+                "PROCESSING_ERROR",
+                e.getMessage(),
+                HttpStatus.INTERNAL_SERVER_ERROR
+        );
+
     }
     return dataRows;
   }

@@ -68,6 +68,7 @@ public class OutboundRequestHandlerServiceImpl {
             new TypeReference<HashMap<String, Object>>() {
             });
       } catch (Exception e1) {
+          log.error("Error occurred", e1);
       }
       log.error("Failed to get details. ", e);
     } catch (Exception e) {
@@ -99,13 +100,16 @@ public class OutboundRequestHandlerServiceImpl {
             new TypeReference<HashMap<String, Object>>() {
             });
       } catch (Exception e1) {
+          log.error("Error occurred", e1);
       }
       log.error(Constants.ERR_RECEIVED + e.getResponseBodyAsString(), e);
     } catch (Exception e) {
       log.error(e.getMessage());
       try {
-        log.warn(Constants.ERR_RESPONSE + mapper.writeValueAsString(response));
+          log.warn("Error response: {}", mapper.writeValueAsString(response));
+
       } catch (Exception e1) {
+          log.error("Error occurred", e1);
       }
     }
     return response;
