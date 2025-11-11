@@ -279,7 +279,6 @@ class CommunityManagementServiceImplMethodTest {
     void testLisAllCategoryWithSubCat_success_fromRedis() throws Exception {
         // Given
         String cachedJson = "{\"cached\":true}";
-        Map<String, Object> cachedMap = Map.of("cached", true);
 
         when(cacheService.getCache(REDIS_CACHE_KEY)).thenReturn(cachedJson);
 

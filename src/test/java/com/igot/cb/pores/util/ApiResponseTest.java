@@ -40,7 +40,6 @@ class ApiResponseTest {
         String id = "id123";
         String ver = "v2";
         String ts = new Timestamp(System.currentTimeMillis()).toString();
-        String message = "Success";
         HttpStatus httpStatus = HttpStatus.OK;
         ApiRespParam params = new ApiRespParam("resp123");
 

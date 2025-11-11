@@ -437,12 +437,8 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
                     Map.Entry<String, JsonNode> field = fields.next();
                     String fieldName = field.getKey();
                     // Check if the field is present in the update JsonNode
-                    if (dataNode.has(fieldName)) {
-                        // Update the main JsonNode with the value from the update JsonNode
-                        ((ObjectNode) dataNode).set(fieldName, communityDetails.get(fieldName));
-                    } else {
-                        ((ObjectNode) dataNode).set(fieldName, communityDetails.get(fieldName));
-                    }
+                    // Update the main JsonNode with the value from the update JsonNode
+                    ((ObjectNode) dataNode).set(fieldName, communityDetails.get(fieldName));
                 }
                 if (esUtilService.isDuplicateCommunity(dataNode.get(Constants.ORG_ID).asText(),
                     dataNode.get(Constants.COMMUNITY_NAME).asText(), dataNode.get(Constants.COMMUNITY_ID).asText())) {
@@ -1834,12 +1830,8 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
                 Map.Entry<String, JsonNode> field = fields.next();
                 String fieldName = field.getKey();
                 // Check if the field is present in the update JsonNode
-                if (dataNode.has(fieldName)) {
-                    // Update the main JsonNode with the value from the update JsonNode
-                    ((ObjectNode) dataNode).set(fieldName, communityDetails.get(fieldName));
-                } else {
-                    ((ObjectNode) dataNode).set(fieldName, communityDetails.get(fieldName));
-                }
+                // Update the main JsonNode with the value from the update JsonNode
+                ((ObjectNode) dataNode).set(fieldName, communityDetails.get(fieldName));
             }
             Timestamp currentTime = new Timestamp(System.currentTimeMillis());
             ((ObjectNode) dataNode).put(Constants.PUBLISHED_ON, String.valueOf(currentTime));

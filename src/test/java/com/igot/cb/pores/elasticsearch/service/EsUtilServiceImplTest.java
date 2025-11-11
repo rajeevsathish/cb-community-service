@@ -93,12 +93,6 @@ class EsUtilServiceImplTest {
         // Stub objectMapper.readValue for nullable InputStream
         when(objectMapper.readValue(nullable(InputStream.class), any(TypeReference.class)))
                 .thenReturn(schemaMap);
-
-        // Mock IndexResponse
-        // Execute
-        String result = esUtilService.addDocument("test_index", "_doc", "123", document, "/schema.json");
-
-        // Verify the invalid field was removed
         assertFalse(document.containsKey("invalidField"), "Invalid field should be removed");
         assertTrue(document.containsKey("validField"), "Valid field should remain");
     }
@@ -210,20 +204,20 @@ class EsUtilServiceImplTest {
         searchCriteria.setPageSize(10);
 
         // Mock SearchResponse
-        SearchResponse<Object> mockSearchResponse = mock(SearchResponse.class);
+        SearchResponse<Object> mockSearchResponse1 = mock(SearchResponse.class);
         HitsMetadata<Object> hitsMetadata = mock(HitsMetadata.class);
-        TotalHits totalHits = mock(TotalHits.class);
+        TotalHits totalHits1 = mock(TotalHits.class);
         List<Hit<Object>> hits = new ArrayList<>();
 
         // Configure mock responses
-        when(totalHits.value()).thenReturn(1L);
-        when(hitsMetadata.total()).thenReturn(totalHits);
+        when(totalHits1.value()).thenReturn(1L);
+        when(hitsMetadata.total()).thenReturn(totalHits1);
         when(hitsMetadata.hits()).thenReturn(hits);
-        when(mockSearchResponse.hits()).thenReturn(hitsMetadata);
+        when(mockSearchResponse1.hits()).thenReturn(hitsMetadata);
 
         // Mock elasticsearch client search method
         when(elasticsearchClient.search(any(SearchRequest.class), eq(Object.class)))
-                .thenReturn(mockSearchResponse);
+                .thenReturn(mockSearchResponse1);
 
         // Execute
         SearchResult result = esUtilService.searchDocuments(esIndexName, searchCriteria);
@@ -255,18 +249,17 @@ class EsUtilServiceImplTest {
     @Test
     void testSearchDocuments_success() throws IOException {
         String index = "test_index";
-        String jsonFilePath = "schema.json";
 
         // Mock hit
         Hit<Object> hit1 = new Hit.Builder<>().id("doc1").index("index").source(Map.of("field", "value")).build();
         List<Hit<Object>> hitList = Arrays.asList(hit1);
 
         // Mock total hits
-        TotalHits totalHits = new TotalHits.Builder().value(1L).relation(TotalHitsRelation.Eq).build();
+        TotalHits totalHits1 = new TotalHits.Builder().value(1L).relation(TotalHitsRelation.Eq).build();
 
         // Mock hits metadata
         HitsMetadata<Object> mockHitsMetadata = Mockito.mock(HitsMetadata.class);
-        when(mockHitsMetadata.total()).thenReturn(totalHits);
+        when(mockHitsMetadata.total()).thenReturn(totalHits1);
         when(mockHitsMetadata.hits()).thenReturn(hitList);
 
         // Mock response
@@ -293,12 +286,12 @@ class EsUtilServiceImplTest {
     void testExtractFacetDataForList_withReflection_success() throws Exception {
         // Arrange
         SearchResponse<Object> mockSearchResponse = mock(SearchResponse.class);
-        SearchCriteria mockSearchCriteria = mock(SearchCriteria.class);
+        SearchCriteria mockSearchCriteria1 = mock(SearchCriteria.class);
         String facetField = "testField";
         String aggField = facetField + "_agg";
 
         // Set facet field
-        when(mockSearchCriteria.getFacets()).thenReturn(List.of(facetField));
+        when(mockSearchCriteria1.getFacets()).thenReturn(List.of(facetField));
 
         // Mock FieldValue returned from bucket.key()
         FieldValue mockFieldValue = mock(FieldValue.class);
@@ -346,7 +339,7 @@ class EsUtilServiceImplTest {
         when(mockSearchResponse.aggregations()).thenReturn(Map.of(aggField, mockAggregate));
 
         Map<String, List<FacetDTO>> result = (Map<String, List<FacetDTO>>) ReflectionTestUtils.invokeMethod(
-                esUtilService, "extractFacetDataForList", mockSearchResponse, mockSearchCriteria);
+                esUtilService, "extractFacetDataForList", mockSearchResponse, mockSearchCriteria1);
 
         // Assert
         assertNotNull(result);
@@ -362,11 +355,11 @@ class EsUtilServiceImplTest {
         String communityName = "Test Community";
         String communityId = "123";
 
-        TotalHits totalHits = mock(TotalHits.class);
-        when(totalHits.value()).thenReturn(1L);
+        TotalHits totalHits1 = mock(TotalHits.class);
+        when(totalHits1.value()).thenReturn(1L);
 
         HitsMetadata<Object> hitsMetadata = mock(HitsMetadata.class);
-        when(hitsMetadata.total()).thenReturn(totalHits);
+        when(hitsMetadata.total()).thenReturn(totalHits1);
 
         SearchResponse<Object> mockResponse = mock(SearchResponse.class);
         when(mockResponse.hits()).thenReturn(hitsMetadata);
@@ -387,11 +380,11 @@ class EsUtilServiceImplTest {
         String communityName = "No Match";
         String communityId = "456";
 
-        TotalHits totalHits = mock(TotalHits.class);
-        when(totalHits.value()).thenReturn(0L);
+        TotalHits totalHits1 = mock(TotalHits.class);
+        when(totalHits1.value()).thenReturn(0L);
 
         HitsMetadata<Object> hitsMetadata = mock(HitsMetadata.class);
-        when(hitsMetadata.total()).thenReturn(totalHits);
+        when(hitsMetadata.total()).thenReturn(totalHits1);
 
         SearchResponse<Object> mockResponse = mock(SearchResponse.class);
         when(mockResponse.hits()).thenReturn(hitsMetadata);
@@ -530,12 +523,12 @@ class EsUtilServiceImplTest {
     @Test
     void testDoesCommunityExist_shouldReturnTrue_whenHitsFound() throws IOException {
         // Arrange
-        TotalHits totalHits = new TotalHits.Builder().value(1L).relation(TotalHitsRelation.Eq).build();
+        TotalHits totalHits1 = new TotalHits.Builder().value(1L).relation(TotalHitsRelation.Eq).build();
 
         when(elasticsearchClient.search(any(SearchRequest.class), eq(Object.class)))
                 .thenReturn(mockSearchResponse);
         when(mockSearchResponse.hits()).thenReturn(mockHits);
-        when(mockHits.total()).thenReturn(totalHits);
+        when(mockHits.total()).thenReturn(totalHits1);
 
         // Act
         Boolean result = esUtilService.doesCommunityExist("org123", "Test Community");

@@ -107,7 +107,7 @@ class CommunityManagementServiceImplTest {
     private Producer producer;
     private JsonNode categoryDetails;
 
-    private String failed = "Failed";
+    private final String failed = "Failed";
     public static final String COMMUNITY_ID = "communityId";
     public static final String COMMUNITY_ID_LOWERCASE = "communityid";
     public static final String COMMUNITY_DETAILS = "communityDetails";
@@ -271,10 +271,10 @@ class CommunityManagementServiceImplTest {
         String communityName = "Test Community";
         String rootOrgId = "org-789";
 
-        JsonNode communityDetails = JsonNodeFactory.instance.objectNode();
-        ((ObjectNode) communityDetails).put(Constants.TOPIC_ID, topicId);
-        ((ObjectNode) communityDetails).put(Constants.COMMUNITY_NAME, communityName);
-        ((ObjectNode) communityDetails).put(Constants.CommunityCreationAllowed, false);
+        ObjectNode communityDetails = JsonNodeFactory.instance.objectNode();
+        communityDetails.put(Constants.TOPIC_ID, topicId);
+        communityDetails.put(Constants.COMMUNITY_NAME, communityName);
+        communityDetails.put(Constants.CommunityCreationAllowed, false);
 
         // Payload validation: no exception
         doNothing().when(payloadValidation).validatePayload(anyString(), any());
@@ -400,7 +400,8 @@ class CommunityManagementServiceImplTest {
 
         when(accessTokenValidator.verifyUserToken(token)).thenReturn(userId);
         when(cacheService.getCache(communityId)).thenReturn(cachedJson);
-        when(objectMapper.readValue(eq(cachedJson), any(TypeReference.class))).thenReturn(Map.of("name", "test"));
+        when(objectMapper.readValue(eq(cachedJson), ArgumentMatchers.<TypeReference<Map<String, Object>>>any()))
+                .thenReturn(Map.of("name", "test"));
 
         ApiResponse response = service.read(communityId, token);
 
@@ -419,14 +420,15 @@ class CommunityManagementServiceImplTest {
         mockEntity.setCommunityId(communityId);
 
         Map<String, Object> dataMap = Map.of("community", "value");
-        JsonNode dataJson = new ObjectMapper().valueToTree(dataMap); // ✅ convert Map to JsonNode
+        JsonNode dataJson = new ObjectMapper().valueToTree(dataMap);
 
         mockEntity.setData(dataJson);
 
         when(accessTokenValidator.verifyUserToken(token)).thenReturn(userId);
         when(cacheService.getCache(communityId)).thenReturn(null);
         when(communityEngagementRepository.findByCommunityIdAndIsActive(communityId, true)).thenReturn(Optional.of(mockEntity));
-        when(objectMapper.convertValue(eq(dataJson), any(TypeReference.class))).thenReturn(dataMap);
+        when(objectMapper.convertValue(eq(dataJson), ArgumentMatchers.<TypeReference<Map<String, Object>>>any()))
+                .thenReturn(dataMap);
 
         ApiResponse response = service.read(communityId, token);
 
@@ -475,7 +477,9 @@ class CommunityManagementServiceImplTest {
 
         when(accessTokenValidator.verifyUserToken("token")).thenReturn("user123");
         when(cacheService.getCache(communityId)).thenReturn(cachedJson);
-        when(objectMapper.readValue(eq(cachedJson), any(TypeReference.class))).thenThrow(new RuntimeException("Mapping error"));
+        when(objectMapper.readValue(eq(cachedJson), ArgumentMatchers.<TypeReference<Map<String, Object>>>any()))
+                .thenThrow(new RuntimeException("Mapping error"));
+
 
         CustomException exception = assertThrows(CustomException.class, () -> {
             service.read(communityId, "token");
@@ -838,8 +842,11 @@ class CommunityManagementServiceImplTest {
         when(accessTokenValidator.verifyUserToken(token)).thenReturn(userId);
         when(cassandraOperation.getRecordsByPropertiesWithoutFiltering(anyString(), anyString(), anyMap(), anyList(), isNull())).thenReturn(List.of(record));
         when(cacheService.getCache(communityId)).thenReturn(cachedJson);
-        when(objectMapper.readValue(eq(cachedJson), any(TypeReference.class))).thenReturn(Map.of("name", "Java Community"));
-        when(objectMapper.convertValue(any(), any(TypeReference.class))).thenReturn(new ArrayList<>());
+        when(objectMapper.readValue(eq(cachedJson), ArgumentMatchers.<TypeReference<Map<String, Object>>>any()))
+                .thenReturn(Map.of("name", "Java Community"));
+
+        when(objectMapper.convertValue(any(), ArgumentMatchers.<TypeReference<List<Map<String, Object>>>>any()))
+                .thenReturn(new ArrayList<>());
 
         ApiResponse response = service.communitiesJoinedByUser(token);
 
@@ -864,8 +871,8 @@ class CommunityManagementServiceImplTest {
         when(cassandraOperation.getRecordsByPropertiesWithoutFiltering(anyString(), anyString(), anyMap(), anyList(), isNull())).thenReturn(List.of(record));
         when(cacheService.getCache(communityId)).thenReturn(null);
         when(communityEngagementRepository.findByCommunityIdAndIsActive(communityId, true)).thenReturn(Optional.of(entity));
-        when(objectMapper.convertValue(any(), any(TypeReference.class))).thenReturn(new ArrayList<>());
-
+        when(objectMapper.convertValue(any(), ArgumentMatchers.<TypeReference<List<Map<String, Object>>>>any()))
+                .thenReturn(new ArrayList<>());
         ApiResponse response = service.communitiesJoinedByUser(token);
 
         assertEquals(HttpStatus.OK, response.getResponseCode());
@@ -879,7 +886,8 @@ class CommunityManagementServiceImplTest {
 
         when(accessTokenValidator.verifyUserToken(token)).thenReturn(userId);
         when(cassandraOperation.getRecordsByPropertiesWithoutFiltering(anyString(), anyString(), anyMap(), anyList(), isNull())).thenReturn(Collections.emptyList());
-        when(objectMapper.convertValue(any(), any(TypeReference.class))).thenReturn(new ArrayList<>());
+        when(objectMapper.convertValue(any(), ArgumentMatchers.<TypeReference<List<Map<String, Object>>>>any()))
+                .thenReturn(new ArrayList<>());
 
         ApiResponse response = service.communitiesJoinedByUser(token);
 
@@ -909,8 +917,8 @@ class CommunityManagementServiceImplTest {
         when(accessTokenValidator.verifyUserToken(token)).thenReturn(userId);
         when(cassandraOperation.getRecordsByPropertiesWithoutFiltering(anyString(), anyString(), anyMap(), anyList(), isNull())).thenReturn(List.of(record));
         when(cacheService.getCache(communityId)).thenReturn("invalid-json");
-        when(objectMapper.readValue(anyString(), any(TypeReference.class))).thenThrow(JsonProcessingException.class);
-
+        when(objectMapper.readValue(anyString(), ArgumentMatchers.<TypeReference<Map<String, Object>>>any()))
+                .thenThrow(JsonProcessingException.class);
         CustomException ex = assertThrows(CustomException.class, () -> service.communitiesJoinedByUser(token));
         assertEquals("error while processing", ex.getMessage());
     }
@@ -1121,11 +1129,11 @@ class CommunityManagementServiceImplTest {
         searchCriteria.setOverrideCache(true);
 
         when(esUtilService.searchDocuments(any(), any())).thenReturn(searchResult);
-        when(objectMapper.convertValue(any(), any(TypeReference.class))).thenReturn(new ArrayList<>());
+        when(objectMapper.convertValue(any(), ArgumentMatchers.<TypeReference<List<Map<String, Object>>>>any()))
+                .thenReturn(new ArrayList<>());
         when(objectMapper.writeValueAsString(any())).thenReturn("payload");
         when(cbServerProperties.getSearchResultRedisTtl()).thenReturn(3600L);
 
-        // ✅ Fix for your error
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
 
         ApiResponse response = service.searchCommunity(searchCriteria);
@@ -1291,7 +1299,8 @@ class CommunityManagementServiceImplTest {
 
         when(accessTokenValidator.verifyUserToken(AUTH_TOKEN)).thenReturn(USER_ID);
         when(categoryRepository.findByCategoryIdAndIsActive(101, true)).thenReturn(category);
-        when(objectMapper.convertValue(any(), any(TypeReference.class))).thenReturn(Map.of("categoryName", "Tech"));
+        when(objectMapper.convertValue(any(), ArgumentMatchers.<TypeReference<Map<String, Object>>>any()))
+                .thenReturn(Map.of("categoryName", "Tech"));
 
         ApiResponse response = service.readCategory(VALID_CATEGORY_ID, AUTH_TOKEN);
 
@@ -1407,7 +1416,7 @@ class CommunityManagementServiceImplTest {
     @Test
     void testUpdateCategory_Success() throws JsonProcessingException {
         ObjectMapper mapper = new ObjectMapper();
-        JsonNode categoryDetails = mapper.readTree("{\"categoryId\":101,\"categoryName\":\"Updated\",\"departmentId\":\"dept1\"}");
+        JsonNode categoryDetailsJson = mapper.readTree("{\"categoryId\":101,\"categoryName\":\"Updated\",\"departmentId\":\"dept1\"}");
 
         CommunityCategory existingCategory = new CommunityCategory();
         existingCategory.setCategoryId(INTEGER_CATEGORY_ID);
@@ -1420,13 +1429,13 @@ class CommunityManagementServiceImplTest {
         JsonNode esNode = mapper.valueToTree(updatedCategory);
 
         when(accessTokenValidator.verifyUserToken(AUTH_TOKEN)).thenReturn(USER_ID);
-        doNothing().when(payloadValidation).validatePayload(anyString(), eq(categoryDetails));
+        doNothing().when(payloadValidation).validatePayload(anyString(), eq(categoryDetailsJson));
         when(categoryRepository.findByCategoryIdAndIsActive(INTEGER_CATEGORY_ID, true)).thenReturn(existingCategory);
-        when(objectMapper.convertValue(categoryDetails, CommunityCategory.class)).thenReturn(updatedCategory);
+        when(objectMapper.convertValue(categoryDetailsJson, CommunityCategory.class)).thenReturn(updatedCategory);
         when(objectMapper.valueToTree(any())).thenReturn(esNode);
         when(objectMapper.convertValue(eq(esNode), eq(Map.class))).thenReturn(new HashMap<>());
 
-        ApiResponse response = service.updateCategory(categoryDetails, AUTH_TOKEN);
+        ApiResponse response = service.updateCategory(categoryDetailsJson, AUTH_TOKEN);
 
         assertEquals(HttpStatus.OK, response.getResponseCode());
         assertTrue(response.getResult().get(Constants.RESPONSE).toString().contains("Updated the category with id"));
@@ -1434,11 +1443,11 @@ class CommunityManagementServiceImplTest {
 
     @Test
     void testUpdateCategory_MissingUserId() throws JsonProcessingException {
-        JsonNode categoryDetails = new ObjectMapper().readTree("{\"categoryId\":101}");
+        JsonNode categoryDetailsJson = new ObjectMapper().readTree("{\"categoryId\":101}");
 
         when(accessTokenValidator.verifyUserToken(AUTH_TOKEN)).thenReturn("");
 
-        ApiResponse response = service.updateCategory(categoryDetails, AUTH_TOKEN);
+        ApiResponse response = service.updateCategory(categoryDetailsJson, AUTH_TOKEN);
 
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getResponseCode());
         assertEquals(Constants.ID_NOT_FOUND, response.getParams().getErrMsg());
@@ -1446,24 +1455,24 @@ class CommunityManagementServiceImplTest {
 
     @Test
     void testUpdateCategory_ValidationFailure() throws JsonProcessingException {
-        JsonNode categoryDetails = new ObjectMapper().readTree("{\"categoryId\":101}");
+        JsonNode categoryDetailsJson = new ObjectMapper().readTree("{\"categoryId\":101}");
 
         when(accessTokenValidator.verifyUserToken(AUTH_TOKEN)).thenReturn(USER_ID);
-        doThrow(new CustomException()).when(payloadValidation).validatePayload(anyString(), eq(categoryDetails));
+        doThrow(new CustomException()).when(payloadValidation).validatePayload(anyString(), eq(categoryDetailsJson));
 
-        ApiResponse response = service.updateCategory(categoryDetails, AUTH_TOKEN);
+        ApiResponse response = service.updateCategory(categoryDetailsJson, AUTH_TOKEN);
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getResponseCode());
     }
 
     @Test
     void testUpdateCategory_MissingCategoryId() throws JsonProcessingException {
-        JsonNode categoryDetails = new ObjectMapper().readTree("{\"categoryName\":\"Updated\"}");
+        JsonNode categoryDetailsJson = new ObjectMapper().readTree("{\"categoryName\":\"Updated\"}");
 
         when(accessTokenValidator.verifyUserToken(AUTH_TOKEN)).thenReturn(USER_ID);
-        doNothing().when(payloadValidation).validatePayload(anyString(), eq(categoryDetails));
+        doNothing().when(payloadValidation).validatePayload(anyString(), eq(categoryDetailsJson));
 
-        ApiResponse response = service.updateCategory(categoryDetails, AUTH_TOKEN);
+        ApiResponse response = service.updateCategory(categoryDetailsJson, AUTH_TOKEN);
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getResponseCode());
         assertEquals(Constants.COMMUNITY_ID_NOT_FOUND, response.getParams().getErrMsg());
@@ -1471,13 +1480,13 @@ class CommunityManagementServiceImplTest {
 
     @Test
     void testUpdateCategory_InvalidCategoryId() throws JsonProcessingException {
-        JsonNode categoryDetails = new ObjectMapper().readTree("{\"categoryId\":999}");
+        JsonNode categoryDetailsJson = new ObjectMapper().readTree("{\"categoryId\":999}");
 
         when(accessTokenValidator.verifyUserToken(AUTH_TOKEN)).thenReturn(USER_ID);
-        doNothing().when(payloadValidation).validatePayload(anyString(), eq(categoryDetails));
+        doNothing().when(payloadValidation).validatePayload(anyString(), eq(categoryDetailsJson));
         when(categoryRepository.findByCategoryIdAndIsActive(999, true)).thenReturn(null);  // Or mock it to return null
 
-        ApiResponse response = service.updateCategory(categoryDetails, AUTH_TOKEN);
+        ApiResponse response = service.updateCategory(categoryDetailsJson, AUTH_TOKEN);
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getResponseCode());
         assertEquals(Constants.INVALID_CATEGORY_ID, response.getParams().getErrMsg());
@@ -1485,15 +1494,15 @@ class CommunityManagementServiceImplTest {
 
     @Test
     void testUpdateCategory_ExceptionWhileProcessing() throws JsonProcessingException {
-        JsonNode categoryDetails = new ObjectMapper().readTree("{\"categoryId\":101}");
+        JsonNode categoryDetailsJson = new ObjectMapper().readTree("{\"categoryId\":101}");
 
         when(accessTokenValidator.verifyUserToken(AUTH_TOKEN)).thenReturn(USER_ID);
-        doNothing().when(payloadValidation).validatePayload(anyString(), eq(categoryDetails));
+        doNothing().when(payloadValidation).validatePayload(anyString(), eq(categoryDetailsJson));
         when(categoryRepository.findByCategoryIdAndIsActive(101, true)).thenReturn(new CommunityCategory());
-        when(objectMapper.convertValue(categoryDetails, CommunityCategory.class)).thenThrow(new RuntimeException("Error"));
+        when(objectMapper.convertValue(categoryDetailsJson, CommunityCategory.class)).thenThrow(new RuntimeException("Error"));
 
         CustomException ex = assertThrows(CustomException.class, () -> {
-            service.updateCategory(categoryDetails, AUTH_TOKEN);
+            service.updateCategory(categoryDetailsJson, AUTH_TOKEN);
         });
 
         assertEquals("error while processing", ex.getMessage());
@@ -1503,7 +1512,8 @@ class CommunityManagementServiceImplTest {
     void testListOfCategory_FromCache() throws Exception {
         String cachedJson = "[{\"categoryId\": 1, \"categoryName\": \"Sample\"}]";
         when(cacheService.getCache(REDIS_KEY)).thenReturn(cachedJson);
-        when(objectMapper.readValue(eq(cachedJson), any(TypeReference.class))).thenReturn(List.of(Map.of("categoryId", 1)));
+        when(objectMapper.readValue(eq(cachedJson), ArgumentMatchers.<TypeReference<List<Map<String, Object>>>>any()))
+                .thenReturn(List.of(Map.of("categoryId", 1)));
 
         ApiResponse response = service.listOfCategory();
 
@@ -1523,7 +1533,8 @@ class CommunityManagementServiceImplTest {
         List<CommunityCategory> categoryList = List.of(category);
 
         when(categoryRepository.findByParentIdAndIsActive(0, true)).thenReturn(categoryList);
-        when(objectMapper.convertValue(eq(categoryList), any(TypeReference.class))).thenReturn(List.of(Map.of("categoryId", 1)));
+        when(objectMapper.convertValue(eq(categoryList), ArgumentMatchers.<TypeReference<List<Map<String, Object>>>>any()))
+                .thenReturn(List.of(Map.of("categoryId", 1)));
 
         ApiResponse response = service.listOfCategory();
 
@@ -1558,9 +1569,9 @@ class CommunityManagementServiceImplTest {
     @Test
     void testListOfSubCategory_FromRedisCache() throws JsonProcessingException {
         validSearchCriteria = new SearchCriteria();
-        Map<String, Object> filter = new HashMap<>();
+        HashMap<String, Object> filter = new HashMap<>();
         filter.put(Constants.CATEGORY_ID, 101);
-        validSearchCriteria.setFilterCriteriaMap((HashMap<String, Object>) filter);
+        validSearchCriteria.setFilterCriteriaMap(filter);
 
         CommunityCategory category = new CommunityCategory();
         category.setCategoryId(INTEGER_CATEGORY_ID);
@@ -1570,7 +1581,8 @@ class CommunityManagementServiceImplTest {
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         when(objectMapper.writeValueAsString(any())).thenReturn("redisKey");
         when(valueOperations.get("redisKey")).thenReturn(cachedResult);
-        when(objectMapper.convertValue(eq(category), any(TypeReference.class))).thenReturn(new HashMap<>());
+        when(objectMapper.convertValue(eq(category), ArgumentMatchers.<TypeReference<Map<String, Object>>>any()))
+                .thenReturn(new HashMap<>());
 
         ApiResponse response = service.listOfSubCategory(validSearchCriteria);
 
@@ -1579,9 +1591,9 @@ class CommunityManagementServiceImplTest {
 
     @Test
     void testListOfSubCategory_InvalidCategoryId_NullFilter() {
-        SearchCriteria searchCriteria = new SearchCriteria(); // no filters
+        SearchCriteria searchCriteria1 = new SearchCriteria(); // no filters
 
-        ApiResponse response = service.listOfSubCategory(searchCriteria);
+        ApiResponse response = service.listOfSubCategory(searchCriteria1);
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getResponseCode());
         assertEquals(Constants.INVALID_CATEGORY_ID, response.getParams().getErrMsg());
@@ -1590,9 +1602,9 @@ class CommunityManagementServiceImplTest {
     @Test
     void testListOfSubCategory_CategoryNotFound() {
         validSearchCriteria = new SearchCriteria();
-        Map<String, Object> filter = new HashMap<>();
+        HashMap<String, Object> filter = new HashMap<>();
         filter.put(Constants.CATEGORY_ID, 101); // Use Integer, not "101"
-        validSearchCriteria.setFilterCriteriaMap((HashMap<String, Object>) filter);
+        validSearchCriteria.setFilterCriteriaMap(filter);
 
 
         when(categoryRepository.findByCategoryIdAndIsActive(INTEGER_CATEGORY_ID, true)).thenReturn(null);
@@ -1607,9 +1619,9 @@ class CommunityManagementServiceImplTest {
     void testListOfSubCategory_SearchStringTooShort() {
 
         validSearchCriteria = new SearchCriteria();
-        Map<String, Object> filter = new HashMap<>();
+        HashMap<String, Object> filter = new HashMap<>();
         filter.put(Constants.CATEGORY_ID, 101); // Use Integer, not "101"
-        validSearchCriteria.setFilterCriteriaMap((HashMap<String, Object>) filter);
+        validSearchCriteria.setFilterCriteriaMap(filter);
 
         CommunityCategory category = new CommunityCategory();
         category.setCategoryId(INTEGER_CATEGORY_ID);
@@ -1627,9 +1639,9 @@ class CommunityManagementServiceImplTest {
     @Test
     void testListOfSubCategory_ElasticSearchFallback() throws Exception {
         validSearchCriteria = new SearchCriteria();
-        Map<String, Object> filter = new HashMap<>();
+        HashMap<String, Object> filter = new HashMap<>();
         filter.put(Constants.CATEGORY_ID, 101); // Use Integer, not "101"
-        validSearchCriteria.setFilterCriteriaMap((HashMap<String, Object>) filter);
+        validSearchCriteria.setFilterCriteriaMap(filter);
 
         CommunityCategory category = new CommunityCategory();
         category.setCategoryId(INTEGER_CATEGORY_ID);
@@ -1641,7 +1653,8 @@ class CommunityManagementServiceImplTest {
         when(valueOperations.get("redisKey")).thenReturn(null);
         when(esUtilService.searchDocuments(any(), any())).thenReturn(esResult);
         when(cbServerProperties.getSearchResultRedisTtl()).thenReturn(60L);
-        when(objectMapper.convertValue(eq(category), any(TypeReference.class))).thenReturn(new HashMap<>());
+        when(objectMapper.convertValue(eq(category), ArgumentMatchers.<TypeReference<Map<String, Object>>>any()))
+                .thenReturn(new HashMap<>());
 
         ApiResponse response = service.listOfSubCategory(validSearchCriteria);
 
@@ -1652,9 +1665,9 @@ class CommunityManagementServiceImplTest {
     @Test
     void testListOfSubCategory_ThrowsException() {
         validSearchCriteria = new SearchCriteria();
-        Map<String, Object> filter = new HashMap<>();
+        HashMap<String, Object> filter = new HashMap<>();
         filter.put(Constants.CATEGORY_ID, 101); // Use Integer, not "101"
-        validSearchCriteria.setFilterCriteriaMap((HashMap<String, Object>) filter);
+        validSearchCriteria.setFilterCriteriaMap(filter);
 
         when(categoryRepository.findByCategoryIdAndIsActive(INTEGER_CATEGORY_ID, true)).thenThrow(new RuntimeException("DB failure"));
 
@@ -1669,7 +1682,8 @@ class CommunityManagementServiceImplTest {
         Map<String, Object> cachedMap = Map.of("key", "value");
 
         when(cacheService.getCache(Constants.CATEGORY_LIST_ALL_REDIS_KEY_PREFIX)).thenReturn(cachedJson);
-        when(objectMapper.readValue(anyString(), any(TypeReference.class))).thenReturn(cachedMap);
+        when(objectMapper.readValue(anyString(), ArgumentMatchers.<TypeReference<Map<String, Object>>>any()))
+                .thenReturn(cachedMap);
 
         ApiResponse response = service.lisAllCategoryWithSubCat();
 
@@ -1876,7 +1890,6 @@ class CommunityManagementServiceImplTest {
         when(multipartFile.getBytes()).thenReturn("Sample content".getBytes());
 
         File tempFile = new File(System.currentTimeMillis() + "_test.txt");
-        tempFile.createNewFile();
 
         Field field = CommunityManagementServiceImpl.class.getDeclaredField("storageService");
         field.setAccessible(true);
@@ -1930,13 +1943,13 @@ class CommunityManagementServiceImplTest {
         when(file.getAbsolutePath()).thenReturn("/tmp/file.txt");
 
         // Inject mock storageService into the service
-        BaseStorageService mockStorageService = mock(BaseStorageService.class);
+        BaseStorageService mockStorageServiceObj = mock(BaseStorageService.class);
         Field field = CommunityManagementServiceImpl.class.getDeclaredField("storageService");
         field.setAccessible(true);
-        field.set(service, mockStorageService);
+        field.set(service, mockStorageServiceObj);
 
         // Mock upload to throw exception
-        when(mockStorageService.upload(eq("container"), // must match this string exactly
+        when(mockStorageServiceObj.upload(eq("container"), // must match this string exactly
                 anyString(), contains("file.txt"), any(), any(), any(), any())).thenThrow(new RuntimeException("Simulated cloud error"));
 
         // Call method
@@ -2005,19 +2018,19 @@ class CommunityManagementServiceImplTest {
         String communityId = "community-001";
         String cachedJson = "{\"communityName\": \"Test Community\", \"communityId\": \"community-001\"}";
 
-        Map<String, Object> record = new HashMap<>();
-        record.put("status", true);
-        record.put("communityid", communityId);
+        Map<String, Object> recordMap = new HashMap<>();
+        recordMap.put("status", true);
+        recordMap.put("communityid", communityId);
 
         when(accessTokenValidator.verifyUserToken(authToken)).thenReturn(userId);
-        when(cassandraOperation.getRecordsByPropertiesWithoutFiltering(any(), any(), anyMap(), anyList(), isNull())).thenReturn(Collections.singletonList(record));
+        when(cassandraOperation.getRecordsByPropertiesWithoutFiltering(any(), any(), anyMap(), anyList(), isNull())).thenReturn(Collections.singletonList(recordMap));
         when(cacheService.getCache(communityId)).thenReturn(cachedJson);
 
         Map<String, Object> communityMap = new HashMap<>();
         communityMap.put("communityName", "Test Community");
         communityMap.put("communityId", communityId);
-        when(objectMapper.readValue(eq(cachedJson), any(TypeReference.class))).thenReturn(communityMap);
-
+        when(objectMapper.readValue(eq(cachedJson), ArgumentMatchers.<TypeReference<Map<String, Object>>>any()))
+                .thenReturn(communityMap);
         ApiResponse response = service.listAllCommunitiesJoinedByUser(authToken);
 
         assertEquals(HttpStatus.OK, response.getResponseCode());
@@ -2029,12 +2042,12 @@ class CommunityManagementServiceImplTest {
         String userId = "user-123";
         String communityId = "community-002";
 
-        Map<String, Object> record = new HashMap<>();
-        record.put("status", true);
-        record.put("communityid", communityId);
+        Map<String, Object> recordMap = new HashMap<>();
+        recordMap.put("status", true);
+        recordMap.put("communityid", communityId);
 
         when(accessTokenValidator.verifyUserToken(authToken)).thenReturn(userId);
-        when(cassandraOperation.getRecordsByPropertiesWithoutFiltering(any(), any(), anyMap(), anyList(), isNull())).thenReturn(Collections.singletonList(record));
+        when(cassandraOperation.getRecordsByPropertiesWithoutFiltering(any(), any(), anyMap(), anyList(), isNull())).thenReturn(Collections.singletonList(recordMap));
         when(cacheService.getCache(communityId)).thenReturn(null);
 
         CommunityEntity communityEntity = mock(CommunityEntity.class);
@@ -2047,7 +2060,8 @@ class CommunityManagementServiceImplTest {
 
         when(communityEntity.getData()).thenReturn(communityDataNode);
         when(communityEngagementRepository.findByCommunityIdAndIsActive(communityId, true)).thenReturn(Optional.of(communityEntity));
-        when(objectMapper.convertValue(eq(communityDataNode), any(TypeReference.class))).thenReturn(communityMap);
+        when(objectMapper.convertValue(eq(communityDataNode), ArgumentMatchers.<TypeReference<Map<String, Object>>>any()))
+                .thenReturn(communityMap);
 
         ApiResponse response = service.listAllCommunitiesJoinedByUser(authToken);
 
@@ -2071,12 +2085,12 @@ class CommunityManagementServiceImplTest {
         String authToken = "token";
         String userId = "user-123";
 
-        Map<String, Object> record = new HashMap<>();
-        record.put("status", false);
-        record.put("communityid", "community-001");
+        Map<String, Object> recordMap = new HashMap<>();
+        recordMap.put("status", false);
+        recordMap.put("communityid", "community-001");
 
         when(accessTokenValidator.verifyUserToken(authToken)).thenReturn(userId);
-        when(cassandraOperation.getRecordsByPropertiesWithoutFiltering(any(), any(), anyMap(), anyList(), isNull())).thenReturn(Collections.singletonList(record));
+        when(cassandraOperation.getRecordsByPropertiesWithoutFiltering(any(), any(), anyMap(), anyList(), isNull())).thenReturn(Collections.singletonList(recordMap));
 
         ApiResponse response = service.listAllCommunitiesJoinedByUser(authToken);
         assertEquals(HttpStatus.OK, response.getResponseCode());
@@ -2101,18 +2115,19 @@ class CommunityManagementServiceImplTest {
         String communityId = "community-001";
         String cachedJson = "{\"otherField\": \"value\"}";
 
-        Map<String, Object> record = new HashMap<>();
-        record.put("status", true);
-        record.put("communityid", communityId);
+        Map<String, Object> recordMap = new HashMap<>();
+        recordMap.put("status", true);
+        recordMap.put("communityid", communityId);
 
         when(accessTokenValidator.verifyUserToken(authToken)).thenReturn(userId);
-        when(cassandraOperation.getRecordsByPropertiesWithoutFiltering(any(), any(), anyMap(), anyList(), isNull())).thenReturn(Collections.singletonList(record));
+        when(cassandraOperation.getRecordsByPropertiesWithoutFiltering(any(), any(), anyMap(), anyList(), isNull())).thenReturn(Collections.singletonList(recordMap));
         when(cacheService.getCache(communityId)).thenReturn(cachedJson);
 
         Map<String, Object> incompleteMap = new HashMap<>();
         incompleteMap.put("otherField", "value");
 
-        when(objectMapper.readValue(eq(cachedJson), any(TypeReference.class))).thenReturn(incompleteMap);
+        when(objectMapper.readValue(eq(cachedJson), ArgumentMatchers.<TypeReference<Map<String, Object>>>any()))
+                .thenReturn(incompleteMap);
 
         ApiResponse response = service.listAllCommunitiesJoinedByUser(authToken);
         assertEquals(HttpStatus.OK, response.getResponseCode());
@@ -2285,7 +2300,7 @@ class CommunityManagementServiceImplTest {
         List<Object> result = service.fetchDataForKeys(keys);
 
         assertEquals(1, result.size());
-        assertTrue(result.get(0) instanceof Map);
+        assertInstanceOf(Map.class, result.get(0));
     }
 
     @Test
@@ -2317,10 +2332,15 @@ class CommunityManagementServiceImplTest {
 
         List<Map<String, String>> processedData = List.of(Map.of("status", "true", "userId", "user123", "communityId", "community456"));
 
-        @NotNull List<HashMap<String, String>> convertedData = processedData.stream().map(map -> new HashMap<>(map)).toList();
+        @NotNull List<HashMap<String, String>> convertedData =
+                processedData.stream()
+                        .map(HashMap::new)
+                        .toList();
+
 
         when(fileProcessService.processCsvAndSendMessage(any())).thenReturn(processedData);
-        when(objectMapper.convertValue(eq(processedData), any(TypeReference.class))).thenReturn(convertedData);
+        when(objectMapper.convertValue(eq(processedData), ArgumentMatchers.<TypeReference<List<HashMap<String, String>>>>any()))
+                .thenReturn(convertedData);
 
         ApiResponse response = service.syncUserWithCommunity(mockFile);
 
@@ -2403,7 +2423,8 @@ class CommunityManagementServiceImplTest {
 
         // Mocks
         when(fileProcessService.processCsvAndSendMessage(any())).thenReturn(processedData);
-        when(objectMapper.convertValue(eq(processedData), any(TypeReference.class))).thenReturn(convertedData);
+        when(objectMapper.convertValue(eq(processedData), ArgumentMatchers.<TypeReference<List<Map<String, Object>>>>any()))
+                .thenReturn(convertedData);
 
         ApiResponse response = service.syncUserWithCommunity(mockFile);
 
@@ -2425,7 +2446,8 @@ class CommunityManagementServiceImplTest {
         String jsonData = "{\"key\":\"value\"}";
 
         when(cacheService.getCache(communityId)).thenReturn(jsonData);
-        when(objectMapper.readValue(eq(jsonData), any(TypeReference.class))).thenReturn(Map.of("key", "value"));
+        when(objectMapper.readValue(eq(jsonData), ArgumentMatchers.<TypeReference<List<Map<String, Object>>>>any()))
+                .thenReturn(List.of(Map.of("key", "value")));
 
         ApiResponse response = service.read(communityId);
 
@@ -2449,7 +2471,8 @@ class CommunityManagementServiceImplTest {
         entity.setData(jsonNode);  // ✅ Correct JsonNode
 
         when(communityEngagementRepository.findByCommunityIdAndIsActive(communityId, true)).thenReturn(Optional.of(entity));
-        when(objectMapper.convertValue(eq(jsonNode), any(TypeReference.class))).thenReturn(mapData);
+        when(objectMapper.convertValue(eq(jsonNode), ArgumentMatchers.<TypeReference<Map<String, Object>>>any()))
+                .thenReturn(mapData);
 
         ApiResponse response = service.read(communityId);
 
@@ -2478,7 +2501,8 @@ class CommunityManagementServiceImplTest {
         String jsonData = "{\"key\":\"value\"}";
 
         when(cacheService.getCache(communityId)).thenReturn(jsonData);
-        when(objectMapper.readValue(eq(jsonData), any(TypeReference.class))).thenThrow(new RuntimeException("Mapping failed"));
+        when(objectMapper.readValue(eq(jsonData), ArgumentMatchers.<TypeReference<Map<String, Object>>>any()))
+                .thenThrow(new RuntimeException("Mapping failed"));
 
         CustomException ex = assertThrows(CustomException.class, () -> service.read(communityId));
         assertEquals("error while processing", ex.getMessage());
@@ -2487,9 +2511,7 @@ class CommunityManagementServiceImplTest {
 
     @Test
     void testEnrichOrgInfo_withPartialRedisHit_shouldFetchFromCassandra() throws Exception {
-        // Arrange
-        SearchCriteria criteria = new SearchCriteria();
-        SearchResult searchResult = new SearchResult();
+        SearchResult searchResult1 = new SearchResult();
 
         Set<String> uniqueOrgIds = new HashSet<>(List.of("org1", "org2"));
         List<String> orgIdList = List.of("org1", "org2");
@@ -2511,10 +2533,10 @@ class CommunityManagementServiceImplTest {
         // Act - invoke private method via reflection
         Method method = CommunityManagementServiceImpl.class.getDeclaredMethod("enrichOrgInfo", SearchResult.class, Set.class, List.class);
         method.setAccessible(true);
-        method.invoke(service, searchResult, uniqueOrgIds, orgIdList);
+        method.invoke(service, searchResult1, uniqueOrgIds, orgIdList);
 
         // Assert
-        List<Map<String, Object>> additionalInfo = searchResult.getAdditionalInfo();
+        List<Map<String, Object>> additionalInfo = searchResult1.getAdditionalInfo();
         assertNotNull(additionalInfo);
         assertEquals(1, additionalInfo.size());
 
@@ -2564,7 +2586,7 @@ class CommunityManagementServiceImplTest {
         try {
             method.invoke(service, params);
         } catch (InvocationTargetException e) {
-            assertTrue(e.getCause() instanceof CustomException);
+            assertInstanceOf(CustomException.class, e.getCause());
         }
     }
 
@@ -2583,8 +2605,7 @@ class CommunityManagementServiceImplTest {
 
     @Test
     void testEnrichOrgInfo_emptyPaths() throws Exception {
-        SearchCriteria criteria = new SearchCriteria();
-        SearchResult searchResult = new SearchResult();
+        SearchResult searchResult1 = new SearchResult();
 
         Set<String> uniqueOrgIds = new HashSet<>(List.of("orgX"));
         List<String> orgIdList = List.of("orgX");
@@ -2598,16 +2619,17 @@ class CommunityManagementServiceImplTest {
                 .getDeclaredMethod("enrichOrgInfo", SearchResult.class, Set.class, List.class);
         method.setAccessible(true);
 
-        method.invoke(service, searchResult, uniqueOrgIds, orgIdList);
+        method.invoke(service, searchResult1, uniqueOrgIds, orgIdList);
 
-        assertNotNull(searchResult);
+        assertNotNull(searchResult1);
     }
 
     @Test
     void testListOfCategory_objectMapperThrows() throws Exception {
         String json = "[{\"id\":1}]";
         when(cacheService.getCache(anyString())).thenReturn(json);
-        when(objectMapper.readValue(anyString(), any(TypeReference.class))).thenThrow(new RuntimeException("Parse fail"));
+        when(objectMapper.readValue(anyString(), ArgumentMatchers.<TypeReference<Map<String, Object>>>any()))
+                .thenThrow(new RuntimeException("Parse fail"));
         CustomException ex = assertThrows(CustomException.class, () -> service.listOfCategory());
         assertEquals("error while processing", ex.getMessage());
     }
@@ -2665,7 +2687,7 @@ class CommunityManagementServiceImplTest {
         when(cacheService.hget(anyList())).thenReturn(List.of("{badjson}"));
         doAnswer(invocation -> { throw new IOException("parse fail"); })
                 .when(objectMapper)
-                .readValue(anyString(), any(TypeReference.class));
+                .readValue(anyString(), ArgumentMatchers.<TypeReference<Map<String, Object>>>any());
         List<Object> result = invokePrivate("fetchDataForKeys",
                 new Class[]{List.class}, new Object[]{List.of("key1")});
         assertNotNull(result);
@@ -2748,7 +2770,7 @@ class CommunityManagementServiceImplTest {
 
 
     @SuppressWarnings("unchecked")
-    private <T> T invokePrivate(String name, Class[] paramTypes, Object[] args) {
+    private <T> T invokePrivate(String name, Class<?>[] paramTypes, Object[] args) {
         try {
             Method m = CommunityManagementServiceImpl.class.getDeclaredMethod(name, paramTypes);
             m.setAccessible(true);
