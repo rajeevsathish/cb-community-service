@@ -39,8 +39,6 @@ public class CbCommunityServiceApplication {
 
     private ClientHttpRequestFactory getClientHttpRequestFactory() {
 
-      // Get the PropertiesCache instance to fetch the properties
-      PropertiesCache propertiesCache = PropertiesCache.getInstance();
       int timeout = 45000;
  // Configure the RequestConfig with timeouts
       RequestConfig config = RequestConfig.custom()

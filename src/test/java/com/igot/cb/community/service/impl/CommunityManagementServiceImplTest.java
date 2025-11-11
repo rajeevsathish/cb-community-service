@@ -25,10 +25,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockedStatic;
-import org.mockito.Mockito;
+import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
@@ -1253,7 +1250,11 @@ class CommunityManagementServiceImplTest {
         when(cassandraOperation.getRecordsByPropertiesWithoutFiltering(any(), any(), any(), any(), anyInt())).thenReturn(List.of(Map.of(Constants.USER_ROOT_ORG_ID, "org1")));
         when(categoryRepository.findByCategoryNameAndIsActive(eq("Test"), eq(true))).thenReturn(null);
         when(categoryRepository.save(any())).thenReturn(savedCategory);
-        when(objectMapper.convertValue(any(), eq(Map.class))).thenReturn(new HashMap<>());
+        when(objectMapper.convertValue(
+                any(),
+                ArgumentMatchers.<TypeReference<Map<String, Object>>>any()
+        )).thenReturn(new HashMap<>());
+
 
         ApiResponse response = service.categoryCreate(categoryDetails, AUTH_TOKEN);
 
@@ -2248,15 +2249,16 @@ class CommunityManagementServiceImplTest {
         // Mock cache data
         List<Object> cachedValues = List.of("{\"designation\":\"Manager\"}");
         when(cacheService.hget(anyList())).thenReturn(cachedValues);
-        when(objectMapper.readValue(eq("{\"designation\":\"Manager\"}"), eq(Object.class))).thenReturn(new HashMap<>(Map.of("designation", "Manager")));
+        when(objectMapper.convertValue(any(), eq(Map.class)))
+                .thenReturn(new HashMap<>(Map.of("dummy", "value")));
 
-        // Act
         ApiResponse response = service.searchCommunityFromPrimary(criteria);
 
-        // Assert
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getResponseCode());
-        assertTrue(response.getResult().containsKey(Constants.SEARCH_RESULTS));
+        assertTrue(response.getResult().containsKey(Constants.SEARCH_RESULTS),
+                "SEARCH_RESULTS key should be present in response result");
+
     }
 
 
@@ -2755,6 +2757,20 @@ class CommunityManagementServiceImplTest {
             throw new RuntimeException(e);
         }
     }
+
+
+    @Test
+    void testValidateUser_validToken() {
+        ApiResponse response = new ApiResponse();
+        when(accessTokenValidator.verifyUserToken("token")).thenReturn("user123");
+
+        String result = invokePrivate("validateUser",
+                new Class[]{String.class, ApiResponse.class, String.class, HttpStatus.class},
+                new Object[]{"token", response, "err", HttpStatus.BAD_REQUEST});
+
+        assertEquals("user123", result);
+    }
+
 
 
 }

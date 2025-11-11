@@ -20,6 +20,7 @@ import com.igot.cb.transactional.cassandrautils.CassandraOperation;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -109,8 +110,12 @@ class CommunityManagementServiceImplMethodTest {
         Mockito.when(categoryRepository.save(any())).thenReturn(savedCategory);
 
         Map<String, Object> convertedMap = Map.of("key", "value");
-        Mockito.when(objectMapper.convertValue(eq(categoryDetails), eq(Map.class)))
-                .thenReturn(convertedMap);
+        doReturn(convertedMap)
+                .when(objectMapper)
+                .convertValue(
+                        eq(categoryDetails),
+                        ArgumentMatchers.<TypeReference<Map<String, Object>>>any()
+                );
         Mockito.when(cbServerProperties.getElasticCommunityCategoryJsonPath()).thenReturn("dummy/path");
 
         ApiResponse response = service.categoryCreate(categoryDetails, authToken);
@@ -149,8 +154,12 @@ class CommunityManagementServiceImplMethodTest {
         Map<String, Object> convertedMap = new HashMap<>();
         convertedMap.put(Constants.CATEGORY_ID, 456);
         convertedMap.put(Constants.STATUS, Constants.ACTIVE);
-
-        Mockito.when(objectMapper.convertValue(any(), eq(Map.class))).thenReturn(convertedMap);
+        doReturn(convertedMap)
+                .when(objectMapper)
+                .convertValue(
+                        any(),
+                        ArgumentMatchers.<TypeReference<Map<String, Object>>>any()
+                );
 
         ApiResponse response = service.categoryCreate(categoryDetails, authToken);
 
@@ -314,8 +323,11 @@ class CommunityManagementServiceImplMethodTest {
                         "name", "Sample Category"
                 )
         );
-        when(objectMapper.convertValue(eq(dataArray), any(TypeReference.class)))
-                .thenReturn(mockList);
+        when(objectMapper.convertValue(
+                eq(dataArray),
+                ArgumentMatchers.<TypeReference<List<Map<String, Object>>>>any()
+        )).thenReturn(mockList);
+
 
         // When
         ApiResponse response = service.lisAllCategoryWithSubCat();

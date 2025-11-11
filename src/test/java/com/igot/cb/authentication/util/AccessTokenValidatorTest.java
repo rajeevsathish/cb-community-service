@@ -2,6 +2,7 @@ package com.igot.cb.authentication.util;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,12 +41,11 @@ class AccessTokenValidatorTest {
 
     private String validToken;
     private String invalidFormatToken;
-    private String expiredToken;
 
     @BeforeEach
     void setUp() throws Exception {
         validToken = generateToken("user123", Time.currentTime() + 1000, getRealmUrl());
-        expiredToken = generateToken("expiredUser", Time.currentTime() - 1000, getRealmUrl());
+        String expiredToken = generateToken("expiredUser", Time.currentTime() - 1000, getRealmUrl());
         invalidFormatToken = "invalid.token";
     }
 
@@ -203,7 +203,8 @@ class AccessTokenValidatorTest {
         decodeMethod.setAccessible(true);
         try {
             decodeMethod.invoke(validator, "invalid");
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            Assertions.fail("Unexpected exception occurred: " + e.getMessage());
         }
         Map<String, Object> result = (Map<String, Object>) validateMethod.invoke(validator, validToken);
         assertTrue(result.isEmpty());

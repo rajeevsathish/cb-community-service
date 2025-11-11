@@ -261,6 +261,7 @@ public class Constants {
     public static final String ERR_RECEIVED = "Error received: ";
     public static final String ERR_RESPONSE = "Error Response: ";
     public static final String DATA_CENTRE = "datacenter1";
+    public static final String ERR_OCCURED = "Error occurred";
 
     private Constants() {
     }
