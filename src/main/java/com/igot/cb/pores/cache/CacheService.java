@@ -1,6 +1,7 @@
 package com.igot.cb.pores.cache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.igot.cb.pores.util.CbServerProperties;
 import com.igot.cb.pores.util.Constants;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -14,9 +15,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.HashOperations;
-import org.springframework.data.redis.core.ListOperations;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -35,6 +37,9 @@ public class CacheService {
 
   @Value("${spring.redis.cacheTtl}")
   private long cacheTtl;
+
+  @Autowired
+  private CbServerProperties properties;
 
   public void putCache(String key, Object object) {
     try {
@@ -92,8 +97,16 @@ public class CacheService {
   public List<String> getPaginatedUsersFromHash(String key, int offset, int limit) {
     try {
       HashOperations<String, String, String> hashOps = redisTemplate.opsForHash();
-      Map<String, String> allUsers = hashOps.entries(key);
-      List<String> userIdList = new ArrayList<>(allUsers.keySet());
+      
+      // Use HSCAN to iterate through hash without loading all entries into memory
+      List<String> userIdList = new ArrayList<>();
+      ScanOptions scanOptions = ScanOptions.scanOptions().count(properties.getRedisScanCountSize()).build();
+      
+      try (Cursor<Map.Entry<String, String>> cursor = hashOps.scan(key, scanOptions)) {
+        while (cursor.hasNext()) {
+          userIdList.add(cursor.next().getKey());
+        }
+      }
 
       // Sort users if needed
       Collections.sort(userIdList);
@@ -104,7 +117,7 @@ public class CacheService {
 
       // Apply pagination
       if (startIndex < userIdList.size()) {
-        return userIdList.subList(startIndex, endIndex);
+        return new ArrayList<>(userIdList.subList(startIndex, endIndex));
       } else {
         return Collections.emptyList();
       }

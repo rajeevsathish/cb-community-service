@@ -65,4 +65,6 @@ public class CbServerProperties {
     @Value("${search.query.fields}")
     private String searchQueryFields;
 
+    @Value("${redis.scan.count.size}")
+    private int redisScanCountSize;
 }
