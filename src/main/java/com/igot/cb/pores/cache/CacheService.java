@@ -87,6 +87,7 @@ public class CacheService {
         Boolean isAbsent = hashOps.putIfAbsent(key, entry.getKey(), entry.getValue());
         // Optional: track how many were actually added
       }
+      redisTemplate.expire(key, properties.getRedisCommunityUserDataTtlSeconds(), TimeUnit.SECONDS);
     } catch (Exception e) {
       log.error("Error while adding users to Redis Hash: {}", e.getMessage(), e);
     }
