@@ -70,4 +70,7 @@ public class CbServerProperties {
 
     @Value("${redis.community.user.data.ttl.seconds}")
     private long redisCommunityUserDataTtlSeconds;
+
+    @Value("${community.admin.join.max.user}")
+    private int communityAdminJoinMaxUser;
 }

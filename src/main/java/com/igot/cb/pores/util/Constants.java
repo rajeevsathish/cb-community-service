@@ -252,6 +252,20 @@ public class Constants {
     public static final String NUMBER = "number";
     public static final String LONG = "long";
     public static final Object DATE = "date";
+    public static final String PRIVATE = "private";
+    public static final String UNJOINED_UPPER = "UNJOINED";
+    public static final String NOT_JOINED_UPPER = "NOT_JOINED";
+    public static final String JOINED_UPPER = "JOINED";
+    public static final String ALREADY_JOINED_UPPER = "ALREADY_JOINED";
+    public static final String ALREADY_JOINED_USERS = "alreadyJoinedUsers";
+    public static final String JOINED_USERS = "joinedUsers";
+    public static final String UNJOINED_USERS = "unjoinedUsers";
+    public static final String NOT_JOINED_USERS = "notJoinedUsers";
+    public static final String FAILED_USERS = "failedUsers";
+    public static final String COMMUNITY_ACCESS_LEVEL = "communityAccessLevel";
+    public static final String USER_IDS = "userIds";
+    public static final String API_COMMUNITY_ADMIN_JOIN = "api.community.admin.join";
+    public static final String API_COMMUNITY_ADMIN_UNJOIN = "api.community.admin.unjoin";
 
     private Constants() {
     }

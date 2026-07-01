@@ -60,4 +60,8 @@ public interface CommunityManagementService {
     ApiResponse read(String communityId);
 
     ApiResponse syncUserWithCommunity(MultipartFile file);
+
+    ApiResponse adminJoinCommunity(Map<String, Object> request, String authToken);
+
+    ApiResponse adminUnjoinCommunity(Map<String, Object> request, String authToken);
 }

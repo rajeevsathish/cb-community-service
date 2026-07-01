@@ -188,4 +188,19 @@ public class CommunityController {
         ApiResponse response = communityManagementService.syncUserWithCommunity(file);
         return new ResponseEntity<>(response, response.getResponseCode());
     }
+
+    @PutMapping("/admin/join")
+    public ResponseEntity<ApiResponse> adminJoin(@RequestBody Map<String, Object> request,
+                                            @RequestHeader(Constants.X_AUTH_TOKEN) String authToken) {
+        ApiResponse response = communityManagementService.adminJoinCommunity(request, authToken);
+        return new ResponseEntity<>(response, response.getResponseCode());
+    }
+
+    @PutMapping("/admin/unjoin")
+    public ResponseEntity<ApiResponse> adminUnjoin(@RequestBody Map<String, Object> request,
+                                              @RequestHeader(Constants.X_AUTH_TOKEN) String authToken) {
+        ApiResponse response = communityManagementService.adminUnjoinCommunity(request, authToken);
+        return new ResponseEntity<>(response, response.getResponseCode());
+    }
+
 }

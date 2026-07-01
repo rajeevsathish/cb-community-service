@@ -535,6 +535,11 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
                 response.getParams().setErr(Constants.INVALID_COMMUNITY_ID);
                 return response;
             }
+            if(Constants.PRIVATE.equalsIgnoreCase(optCommunity.get().getData().path(Constants.COMMUNITY_ACCESS_LEVEL).asText())){
+                response.setResponseCode(HttpStatus.BAD_REQUEST);
+                response.getParams().setErr("This is a private community. Users cannot join it directly.");
+                return response;
+            }
             Map<String, Object> propertyMap = new HashMap<>();
             propertyMap.put(Constants.USER_ID, userId);
             propertyMap.put(Constants.CommunityId, communityId);
@@ -2332,4 +2337,248 @@ public class CommunityManagementServiceImpl implements CommunityManagementServic
         return response;
     }
 
+    @Override
+    public ApiResponse adminJoinCommunity(Map<String, Object> request, String authToken) {
+
+        logger.info("CommunityManagementServiceImpl:adminJoinCommunity");
+        ApiResponse response = ProjectUtil.createDefaultResponse(Constants.API_COMMUNITY_ADMIN_JOIN);
+        try {
+            CommunityEntity community = validateAdminCommunityRequest(request, authToken, response);
+            if (community == null) {
+                return response;
+            }
+            String communityId = (String) request.get(Constants.COMMUNITY_ID);
+            Instant now = Instant.now();
+
+            List<String> joinedUsers = new ArrayList<>();
+            List<String> alreadyJoinedUsers = new ArrayList<>();
+            List<String> failedUsers = new ArrayList<>();
+
+            List<String> userIds = (List<String>) request.get(Constants.USER_IDS);
+            for (String userId : userIds) {
+                String status = joinUserToCommunity(userId, communityId, community, now);
+                switch (status) {
+                    case Constants.JOINED_UPPER:
+                        joinedUsers.add(userId);
+                        break;
+                    case Constants.ALREADY_JOINED_UPPER:
+                        alreadyJoinedUsers.add(userId);
+                        break;
+                    default:
+                        failedUsers.add(userId);
+                }
+            }
+            if (!joinedUsers.isEmpty()) {
+                clearCommunityCache();
+            }
+            Map<String, Object> result = new HashMap<>();
+            result.put(Constants.JOINED_USERS, joinedUsers);
+            result.put(Constants.ALREADY_JOINED_USERS, alreadyJoinedUsers);
+            result.put(Constants.FAILED_USERS, failedUsers);
+            response.setResult(result);
+            return response;
+
+        } catch (Exception e) {
+            logger.error("Error while admin joining users to community", e);
+            throw new CustomException(Constants.ERROR, "error while processing", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private String joinUserToCommunity(String userId, String communityId, CommunityEntity community, Instant now) {
+
+        try {
+            Map<String, Object> propertyMap = new HashMap<>();
+            propertyMap.put(Constants.USER_ID, userId);
+            propertyMap.put(Constants.CommunityId, communityId);
+            List<Map<String, Object>> userCommunityDetails =
+                    cassandraOperation.getRecordsByPropertiesWithoutFiltering(
+                            Constants.KEYSPACE_SUNBIRD,
+                            Constants.USER_COMMUNITY_TABLE,
+                            propertyMap,
+                            null,
+                            1);
+
+            if (CollectionUtils.isEmpty(userCommunityDetails)) {
+                Map<String, Object> insertMap = new HashMap<>();
+                insertMap.put(Constants.COMMUNITY_ID, communityId);
+                insertMap.put(Constants.USER_ID, userId);
+                insertMap.put(Constants.STATUS, true);
+                insertMap.put(Constants.LAST_UPDATED_AT, now);
+                cassandraOperation.insertRecord(Constants.KEYSPACE_SUNBIRD, Constants.USER_COMMUNITY_TABLE, insertMap);
+
+            } else {
+                Boolean status = (Boolean) userCommunityDetails.get(0).get(Constants.STATUS);
+                if (Boolean.TRUE.equals(status)) {
+                    return Constants.ALREADY_JOINED_UPPER;
+                }
+
+                Map<String, Object> updateMap = new HashMap<>();
+                updateMap.put(Constants.STATUS, true);
+                updateMap.put(Constants.LAST_UPDATED_AT, now);
+                cassandraOperation.updateRecord(Constants.KEYSPACE_SUNBIRD, Constants.USER_COMMUNITY_TABLE, updateMap, propertyMap);
+            }
+
+            Map<String, Object> dataMap = new HashMap<>();
+            dataMap.put(Constants.COMMUNITY, community);
+            dataMap.put(Constants.USER_ID, userId);
+            producer.push(userCountUpdateTopic, dataMap);
+            esUtilService.updateUserIndex(userId, communityId, true);
+            return Constants.JOINED_UPPER;
+
+        } catch (Exception e) {
+            logger.error("Error while adding user {} to community {}", userId, communityId, e);
+            return Constants.FAILED_CONST;
+        }
+    }
+
+    @Override
+    public ApiResponse adminUnjoinCommunity(Map<String, Object> request, String authToken) {
+
+        logger.info("CommunityManagementServiceImpl:adminUnjoinCommunity");
+        ApiResponse response = ProjectUtil.createDefaultResponse(Constants.API_COMMUNITY_ADMIN_UNJOIN);
+        try {
+            CommunityEntity community = validateAdminCommunityRequest(request, authToken, response);
+            if (community == null) {
+                return response;
+            }
+            String communityId = (String) request.get(Constants.COMMUNITY_ID);
+            Instant now = Instant.now();
+            List<String> unjoinedUsers = new ArrayList<>();
+            List<String> notJoinedUsers = new ArrayList<>();
+            List<String> failedUsers = new ArrayList<>();
+
+            List<String> userIds = (List<String>) request.get(Constants.USER_IDS);
+            for (String userId : userIds) {
+                String status = unjoinUserFromCommunity(userId, communityId, community, now);
+                switch (status) {
+                    case Constants.UNJOINED_UPPER:
+                        unjoinedUsers.add(userId);
+                        break;
+                    case Constants.NOT_JOINED_UPPER:
+                        notJoinedUsers.add(userId);
+                        break;
+                    default:
+                        failedUsers.add(userId);
+                }
+            }
+            if (!unjoinedUsers.isEmpty()) {
+                clearCommunityCache();
+            }
+            Map<String, Object> result = new HashMap<>();
+            result.put(Constants.UNJOINED_USERS, unjoinedUsers);
+            result.put(Constants.NOT_JOINED_USERS, notJoinedUsers);
+            result.put(Constants.FAILED_USERS, failedUsers);
+            response.setResult(result);
+
+            return response;
+
+        } catch (Exception e) {
+            logger.error("Error while admin removing users from community", e);
+            throw new CustomException(Constants.ERROR, "error while processing", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private String unjoinUserFromCommunity(String userId, String communityId, CommunityEntity community, Instant now) {
+        try {
+            Map<String, Object> propertyMap = new HashMap<>();
+            propertyMap.put(Constants.USER_ID, userId);
+            propertyMap.put(Constants.COMMUNITY_ID, communityId);
+
+            List<Map<String, Object>> userCommunityDetails =
+                    cassandraOperation.getRecordsByPropertiesWithoutFiltering(
+                            Constants.KEYSPACE_SUNBIRD,
+                            Constants.USER_COMMUNITY_TABLE,
+                            propertyMap,
+                            null,
+                            1);
+
+            if (CollectionUtils.isEmpty(userCommunityDetails)) {
+                return Constants.NOT_JOINED_UPPER;
+            }
+            Boolean status = (Boolean) userCommunityDetails.get(0).get(Constants.STATUS);
+            if (Boolean.FALSE.equals(status)) {
+                return Constants.NOT_JOINED_UPPER;
+            }
+
+            Map<String, Object> updateUserCommunityDetails = new HashMap<>();
+            updateUserCommunityDetails.put(Constants.STATUS, false);
+            updateUserCommunityDetails.put(Constants.LAST_UPDATED_AT, now);
+
+            Map<String, Object> updateUserCommunityLookUp = new HashMap<>();
+            updateUserCommunityLookUp.put(Constants.STATUS, false);
+
+            cassandraOperation.updateRecord(Constants.KEYSPACE_SUNBIRD, Constants.USER_COMMUNITY_TABLE, updateUserCommunityDetails, propertyMap);
+            cassandraOperation.updateRecord(Constants.KEYSPACE_SUNBIRD, Constants.USER_COMMUNITY_LOOK_UP_TABLE, updateUserCommunityLookUp, propertyMap);
+
+            JsonNode dataNode = community.getData();
+            ((ObjectNode) dataNode).put(Constants.COUNT_OF_PEOPLE_JOINED, dataNode.get(Constants.COUNT_OF_PEOPLE_JOINED).asInt() - 1);
+            updateCommunityDetails(community, userId, dataNode, Constants.ACTIVE);
+            cacheService.deleteUserFromHash(Constants.CMMUNITY_USER_REDIS_PREFIX + communityId, Constants.USER_PREFIX + userId);
+
+            esUtilService.updateUserIndex(userId, communityId, false);
+            return Constants.UNJOINED_UPPER;
+
+        } catch (Exception e) {
+            logger.error("Error while removing user {} from community {}", userId, communityId, e);
+            return Constants.FAILED_CONST;
+        }
+    }
+
+    private CommunityEntity validateAdminCommunityRequest(
+            Map<String, Object> request,
+            String authToken,
+            ApiResponse response) {
+
+        String adminUserId = accessTokenValidator.verifyUserToken(authToken);
+        if (StringUtils.isBlank(adminUserId)) {
+            returnErrorMsg("Invalid user ID from auth token.", HttpStatus.BAD_REQUEST, response);
+            return null;
+        }
+
+        String error = validateJoinPayload(request);
+        if (StringUtils.isNotBlank(error)) {
+            returnErrorMsg(error, HttpStatus.BAD_REQUEST, response);
+            return null;
+        }
+
+        error = validateUserIds(request);
+        if (StringUtils.isNotBlank(error)) {
+            returnErrorMsg(error, HttpStatus.BAD_REQUEST, response);
+            return null;
+        }
+
+        String communityId = (String) request.get(Constants.COMMUNITY_ID);
+        return validateCommunity(communityId, response);
+    }
+
+    private String validateUserIds(Map<String, Object> request) {
+        Object usersObj = request.get(Constants.USER_IDS);
+        if (!(usersObj instanceof List)) {
+            return "Invalid userIds";
+        }
+        List<String> userIds = new ArrayList<>(new LinkedHashSet<>((List<String>) usersObj));
+        if (CollectionUtils.isEmpty(userIds)) {
+            return "userIds cannot be empty";
+        }
+        request.put(Constants.USER_IDS, userIds);
+        int maxUsers = cbServerProperties.getCommunityAdminJoinMaxUser();
+        if (userIds.size() > maxUsers) {
+            return "Maximum " + maxUsers + " users allowed per request";
+        }
+        return null;
+    }
+
+    private CommunityEntity validateCommunity(String communityId, ApiResponse response) {
+        Optional<CommunityEntity> optCommunity = communityEngagementRepository.findByCommunityIdAndIsActive(communityId, true);
+        if (optCommunity.isEmpty() || optCommunity.get().getData().isEmpty()) {
+            response.setResponseCode(HttpStatus.BAD_REQUEST);
+            response.getParams().setErr(Constants.INVALID_COMMUNITY_ID);
+            return null;
+        }
+        return optCommunity.get();
+    }
+
+    private void clearCommunityCache() {
+        cacheService.deleteCache(generateRedisJwtTokenKey(createDefaultSearchPayload()));
+    }
 }
