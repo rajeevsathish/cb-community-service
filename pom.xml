@@ -29,6 +29,12 @@
 	<properties>
 		<java.version>17</java.version>
 		<kafka.version>2.8.1</kafka.version>
+		<jacoco.version>0.8.11</jacoco.version>
+		<sonar.projectKey>cb-community-service</sonar.projectKey>
+		<sonar.projectName>cb-community-service</sonar.projectName>
+		<sonar.coverage.jacoco.xmlReportPaths>${project.build.directory}/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
+		<sonar.java.binaries>${project.build.directory}/classes</sonar.java.binaries>
+		<sonar.exclusions>**/dto/**,**/entity/**,**/model/**,**/config/**,**/*Application.java</sonar.exclusions>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -90,12 +96,6 @@
 			<groupId>org.springframework.data</groupId>
 			<artifactId>spring-data-cassandra</artifactId>
 		</dependency>
-		<dependency>
-			<groupId>org.sonarsource.scanner.maven</groupId>
-			<artifactId>sonar-maven-plugin</artifactId>
-			<version>3.8.0.2131</version>
-		</dependency>
-
 		<dependency>
 			<groupId>co.elastic.clients</groupId>
 			<artifactId>elasticsearch-java</artifactId>
@@ -291,7 +291,58 @@
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 			</plugin>
+			<plugin>
+				<groupId>org.jacoco</groupId>
+				<artifactId>jacoco-maven-plugin</artifactId>
+				<version>${jacoco.version}</version>
+				<executions>
+					<execution>
+						<id>prepare-agent</id>
+						<goals>
+							<goal>prepare-agent</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>report</id>
+						<phase>test</phase>
+						<goals>
+							<goal>report</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>jacoco-check</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>check</goal>
+						</goals>
+						<configuration>
+							<rules>
+								<rule>
+									<element>BUNDLE</element>
+									<limits>
+										<limit>
+											<counter>LINE</counter>
+											<value>COVEREDRATIO</value>
+											<minimum>0.72</minimum>
+										</limit>
+									</limits>
+								</rule>
+							</rules>
+							<haltOnFailure>true</haltOnFailure>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>org.sonarsource.scanner.maven</groupId>
+					<artifactId>sonar-maven-plugin</artifactId>
+					<version>3.10.0.2594</version>
+				</plugin>
+			</plugins>
+		</pluginManagement>
 	</build>
 
 </project>
